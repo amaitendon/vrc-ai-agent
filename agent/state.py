@@ -1,0 +1,73 @@
+"""
+agent/state.py
+
+LangGraphエージェントのステート定義。
+エージェントの判断に必要な全情報をここに集約する。
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Annotated
+
+from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
+from typing_extensions import TypedDict
+
+
+class Vector3(TypedDict):
+    """3次元ベクトル。VRCのOSC受信値などに使用。"""
+
+    x: float
+    y: float
+    z: float
+
+
+class OscStatus(TypedDict):
+    """OSC経由で取得できる自分自身の状態。"""
+
+    velocity: Vector3  # 移動速度ベクトル（移動中かどうかの確認用）
+    angular_y: float  # Y軸回転速度
+
+
+class ToolCallRecord(TypedDict):
+    """ナッジノード用のツール使用履歴エントリ。"""
+
+    tool_name: str
+    called_at: datetime
+
+
+class AgentState(TypedDict):
+    """
+    LangGraphエージェントのメインステート。
+
+    設計方針:
+    - エージェントの判断に使う情報はすべてここに集約する
+    - Phase2で空間情報や音声方向を追加する場合もここに足すだけで済む構造
+    """
+
+    # ── 会話履歴 ──────────────────────────────────────────────────────────────
+    # add_messages: 上書きではなく追記されるReducer（LangGraph組み込み）
+    # trim_messagesはノード処理前に適用してトークンを管理する
+    messages: Annotated[list[BaseMessage], add_messages]
+
+    # ── 外部コンテキスト（各ノード処理前にシステムプロンプトへ差し込む） ────
+    current_time: datetime
+    current_date: str  # 例: "2026-02-26 (Thu)"
+
+    # ── OSC受信ステータス（Phase1: 速度・回転のみ） ──────────────────────────
+    # 位置情報はOSCで取得不可のため Phase2（視覚MCP）へ
+    osc_status: OscStatus
+
+    # ── ツール使用履歴（ナッジノードが参照する） ────────────────────────────
+    # Phase2のナッジ実装時に使用。Phase1から記録だけしておく。
+    tool_call_history: list[ToolCallRecord]
+
+    # ── 最終アクションのタイムスタンプ（ナッジ判定用） ──────────────────────
+    last_spoke_at: datetime | None  # 最後にTTSで発声した時刻
+    last_memory_saved_at: datetime | None  # 最後に長期記憶を保存した時刻
+
+    # ── Phase2: 以下は将来追加予定 ───────────────────────────────────────────
+    # visual_context: str | None        # 視覚MCP（Spout）の解析結果
+    # speaker_direction: float | None   # 音声L/R比較による話者方向
+    # heartbeat_count: int              # ハートビートの発火回数
