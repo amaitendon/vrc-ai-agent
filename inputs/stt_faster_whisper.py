@@ -43,10 +43,10 @@ class FasterWhisperSpeechRecognizer(SpeechRecognizer):
 
         # Run transcription in a separate thread to avoid blocking the event loop
         loop = asyncio.get_event_loop()
-        segments, _ = await loop.run_in_executor(
-            None, 
-            lambda: self.model.transcribe(audio_np, language=self.language)
-        )
         
-        text = "".join([segment.text for segment in segments])
+        def _transcribe_blocking():
+            segs, _ = self.model.transcribe(audio_np, language=self.language)
+            return "".join([segment.text for segment in segs])
+            
+        text = await loop.run_in_executor(None, _transcribe_blocking)
         return text

@@ -28,10 +28,10 @@ class AudioOutputPipeline:
         # TODO: speaker_id を.envから取得できるようにする
         speaker_id = int(os.getenv("VOICEVOX_SPEAKER_ID", "46")) 
         
-        logger.info(f"[AudioOutputPipeline] Connecting to Voicevox at {voicevox_url} with speaker_id {speaker_id}")
+        logger.info(f"[AudioOutputPipeline] Connecting to Voicevox at {voicevox_url} with speaker {speaker_id}")
         self.tts = VoicevoxSpeechSynthesizer(
             base_url=voicevox_url,
-            speaker_id=speaker_id
+            speaker=speaker_id
         )
 
         # 音声再生プレイヤのセットアップ
@@ -49,7 +49,7 @@ class AudioOutputPipeline:
             # 再生
             logger.debug(f"[AudioOutputPipeline] Playing back synthesized audio ({len(audio_data)} bytes)...")
             # aiavatarkitの実装ではAudioPlayer.add(bytes)でキューに追加し勝手に別スレッドで再生する
-            self.player.add(audio_data)
+            self.player.add(audio_data, has_wave_header=True)
             logger.debug("[AudioOutputPipeline] Playback enqueued.")
 
         except Exception as e:
