@@ -14,12 +14,12 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, trim_messages
 from loguru import logger
 
 from agent.graph import build_graph
 from agent.state import AgentState, OscStatus, Vector3
+from inputs.audio import setup_audio_listener
 
 # ── AppContext ────────────────────────────────────────────────────────────────
 
@@ -78,44 +78,15 @@ PRIORITY_BEAT = 10  # ハートビート（Phase2）
 async def audio_listener(ctx: AppContext) -> None:
     """
     音声を常時監視するタスク。このタスクは絶対に止まらない。
-
-    音声検知時:
-      - sayが再生中なら再生をキャンセルして interrupted_action を付与
-      - キューに高優先度でput
+    VAD + FasterWhisper を使って STT を行い、結果をキューに投げる。
     """
-    # TODO Phase1（STEP3）: aiavatarkitのVAD+STTに差し替える
-    # 現状はダミー実装（標準入力でテキスト入力をエミュレート）
-    logger.info("[audio_listener] started (dummy stdin mode)")
+    logger.info("[audio_listener] starting real STT pipeline")
+    
+    try:
+        await setup_audio_listener(ctx)
+    except Exception as e:
+        logger.error(f"[audio_listener] fatal error: {e}", exc_info=True)
 
-    loop = asyncio.get_event_loop()
-    while True:
-        try:
-            # ダミー: 標準入力から読み取り（STT実装後に差し替え）
-            text = await loop.run_in_executor(None, input, "user> ")
-            if not text.strip():
-                continue
-
-            interrupted_action = None
-
-            # sayが再生中なら停止
-            if ctx.say_task and not ctx.say_task.done():
-                logger.info(
-                    "[audio_listener] cancelling say_task due to voice interrupt"
-                )
-                ctx.say_task.cancel()
-                interrupted_action = "say"
-
-            event = QueueEvent(
-                priority=PRIORITY_VOICE,
-                text=text.strip(),
-                interrupted_action=interrupted_action,
-            )
-            await ctx.priority_queue.put(event)
-            logger.debug(f"[audio_listener] queued: {event}")
-
-        except Exception as e:
-            # audio_listenerは何があっても止めない
-            logger.error(f"[audio_listener] error (continuing): {e}")
 
 
 # ── queue_loop ────────────────────────────────────────────────────────────────
@@ -149,10 +120,27 @@ async def queue_loop(ctx: AppContext) -> None:
         else:
             user_message = HumanMessage(content=event.text)
 
+        # 割り込み考慮後メッセージを追加
+        persistent_state["messages"].append(user_message)
+
+        # トークン（メッセージ数）の上限管理 (最新10往復=約20メッセージ程度を残す)
+        # trim_messagesを用いて、システムプロンプト等を含まない生の履歴リストを切り詰める
+        try:
+            trimmed_messages = trim_messages(
+                persistent_state["messages"],
+                max_tokens=20, # 簡易的にメッセージ件数として扱う（token_counter未指定時のデフォルト挙動）
+                strategy="last",
+                token_counter=len, # len関数でシンプルにリストの長さとして計算
+                include_system=False, # ここにはSystemMessageは含まれていない
+                allow_partial=False
+            )
+            persistent_state["messages"] = trimmed_messages
+        except Exception as e:
+            logger.warning(f"[queue_loop] trim_messages error: {e}")
+
         # 1サイクル分のステートを組み立て
         invoke_state: AgentState = {
             **persistent_state,
-            "messages": persistent_state["messages"] + [user_message],
             "current_time": datetime.now(),
             "current_date": datetime.now().strftime("%Y-%m-%d (%a)"),
             "osc_status": ctx.osc_status,
