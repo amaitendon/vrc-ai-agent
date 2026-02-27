@@ -1,8 +1,14 @@
+"""
+inputs/stt_faster_whisper.py
+
+faster-whisperを用いたローカル完結の音声認識（STT）の実装。
+aiavatarkitのSpeechRecognizerを基底クラスとして作成しています。
+"""
 import asyncio
 from typing import List
 import numpy as np
 from faster_whisper import WhisperModel
-from .base import SpeechRecognizer
+from aiavatar.sts.stt.base import SpeechRecognizer
 
 class FasterWhisperSpeechRecognizer(SpeechRecognizer):
     def __init__(

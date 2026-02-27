@@ -49,11 +49,9 @@ class AudioOutputPipeline:
             
             # 再生
             logger.debug(f"[AudioOutputPipeline] Playing back synthesized audio ({len(audio_data)} bytes)...")
-            # AudioPlayer.play_wave は同期的/ブロッキングするプレイヤを別スレッドで回す想定か、
-            # aiavatarkitの実装によっては非同期呼び出しが必要
-            # 今回は単純な例として直接呼ぶ
-            self.player.play_wave(audio_data)
-            logger.debug("[AudioOutputPipeline] Playback completed.")
+            # aiavatarkitの実装ではAudioPlayer.add(bytes)でキューに追加し勝手に別スレッドで再生する
+            self.player.add(audio_data)
+            logger.debug("[AudioOutputPipeline] Playback enqueued.")
 
         except Exception as e:
             logger.error(f"[AudioOutputPipeline] Error during speech synthesis or playback: {e}", exc_info=True)
