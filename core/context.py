@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
-from agent.state import OscStatus, Vector3
+from core.types import OscStatus, Vector3
 
 
 # ── AppContext ────────────────────────────────────────────────────────────────

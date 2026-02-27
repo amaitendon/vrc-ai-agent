@@ -5,15 +5,13 @@ inputs/audio.py
 メインの優先度付きキューへエンキューする処理を提供する。
 """
 
-import asyncio
 import os
 from loguru import logger
 
-from aiavatar.device.audio import AudioDevice
 from aiavatar.sts.vad.silero import SileroSpeechDetector
 from inputs.stt_faster_whisper import FasterWhisperSpeechRecognizer
 
-from agent.core.context import AppContext, QueueEvent, PRIORITY_VOICE
+from core.context import AppContext, QueueEvent, PRIORITY_VOICE
 
 
 class AudioInputPipeline:

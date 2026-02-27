@@ -12,7 +12,6 @@ main.py
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
 from datetime import datetime
 from langchain_core.messages import HumanMessage, trim_messages
 from loguru import logger
@@ -20,7 +19,7 @@ from loguru import logger
 from agent.graph import build_graph
 from agent.state import AgentState
 from inputs.audio import setup_audio_listener
-from agent.core.context import AppContext, QueueEvent, PRIORITY_VOICE, PRIORITY_BEAT
+from core.context import AppContext, QueueEvent
 
 
 # ── audio_listener ────────────────────────────────────────────────────────────

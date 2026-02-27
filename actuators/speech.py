@@ -7,7 +7,6 @@ TTS（Voicevox等）を用いた発声機能のセットアップを行う。
 import os
 from loguru import logger
 
-from aiavatar.device.audio import AudioDevice
 from aiavatar.sts.tts.voicevox import VoicevoxSpeechSynthesizer
 from aiavatar.device.audio import AudioPlayer
 
