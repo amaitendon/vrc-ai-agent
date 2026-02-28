@@ -14,7 +14,7 @@ from aiavatar.sts.tts.voicevox import VoicevoxSpeechSynthesizer
 from aiavatar.device.audio import AudioPlayer
 from core.context import AppContext
 from langchain_core.tools import tool
-from utils.audio import get_device_index_by_name
+from utils.audio_device import get_device_index_by_name
 
 
 class AudioOutputPipeline:

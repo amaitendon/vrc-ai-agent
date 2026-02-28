@@ -8,106 +8,18 @@ ReActループの骨格: inject_context → think → ToolNode → (ループ or
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
-from langchain_core.tools import tool
+from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from loguru import logger
 
+from agent.nodes.action import TOOLS
+from agent.nodes.inject_context import inject_context
+from agent.nodes.think import think
 from agent.state import AgentState
 
-# ── ツール定義（各モジュールが実装後にここへインポートして追加する） ──────────
-from actuators.speech import say
-
-# Phase1で追加予定:
-#   from actuators.chat import chat
-#   from actuators.movement import move
-#   from memory.long_term import save_memory
-
-
-@tool
-def end_action() -> str:
-    """
-    現在の行動サイクルを終了する。
-    会話への応答が完了した、またはこれ以上行動が不要と判断したときに呼ぶ。
-    """
-    return "action_ended"
-
-
-# ToolNodeに登録するツール一覧
-# ツールを追加するときはこのリストに足すだけでグラフ構造は変わらない
-TOOLS = [
-    end_action,
-    say,
-    # chat,
-    # move,
-    # save_memory,
-]
-
 tool_node = ToolNode(TOOLS)
-
-
-# ── ノード定義 ────────────────────────────────────────────────────────────────
-
-
-async def inject_context(state: AgentState) -> dict:
-    """
-    外部コンテキストをステートに注入するノード。
-    時刻・OSCステータスなどを最新値に更新する。
-
-    このノードはthinkノードの直前に毎回実行されるため、
-    LLMは常に最新のコンテキストを参照できる。
-    """
-    now = datetime.now()
-    logger.debug(f"[inject_context] time={now.isoformat()}")
-
-    # TODO Phase1: OSCレシーバーから velocity / angular_y を取得して更新
-    # osc_status = osc_receiver.get_latest()
-
-    return {
-        "current_time": now,
-        "current_date": now.strftime("%Y-%m-%d (%a)"),
-        # "osc_status": osc_status,  # Phase1で有効化
-    }
-
-
-async def think(state: AgentState) -> dict:
-    """
-    LLM思考ノード。
-    ツールを呼ぶか / end_actionを呼ぶか / （将来）ハートビートに応じた行動を決める。
-    思考内容の素テキストはVRCへ渡さない（ToolNode経由でのみ外部に出る）。
-    """
-    from agent.llm import get_llm  # 循環import回避のためここでimport
-
-    llm = get_llm().bind_tools(TOOLS)
-
-    # 外部コンテキストをシステムプロンプトへ動的に差し込む
-    system_content = _build_system_prompt(state)
-    system_msg = SystemMessage(content=system_content)
-
-    # trim_messagesはPhase1（STEP3）で実装後、ここで適用する
-    # messages = trim_messages(state["messages"], ...)
-    messages = state["messages"]
-
-    logger.debug(f"[think] invoking LLM, message_count={len(messages)}")
-    response: AIMessage = await llm.ainvoke([system_msg] + messages)
-    logger.debug(
-        f"[think] response tool_calls={[tc['name'] for tc in response.tool_calls]}"
-    )
-
-    # ツール使用履歴を記録（Phase2のナッジが参照する）
-    now = datetime.now()
-    new_records = [
-        {"tool_name": tc["name"], "called_at": now} for tc in response.tool_calls
-    ]
-    updated_history = state.get("tool_call_history", []) + new_records
-
-    return {
-        "messages": [response],
-        "tool_call_history": updated_history,
-    }
 
 
 # ── 条件分岐 ─────────────────────────────────────────────────────────────────
@@ -189,43 +101,5 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
     builder.add_conditional_edges("think", route_after_think)
     builder.add_conditional_edges("tools", route_after_tools)
 
-    return builder.compile(
-        # 無限ループ防止。1イベントあたりの最大ステップ数。
-        # 1サイクル = inject_context + think + tools の3ステップ消費
-        # → 25ステップ ≒ 最大8ツール呼び出し程度
-    )
+    return builder.compile()
 
-
-# ── ヘルパー ──────────────────────────────────────────────────────────────────
-
-
-def _build_system_prompt(state: AgentState) -> str:
-    """
-    外部コンテキストを含むシステムプロンプトを動的に生成する。
-    prompts.pyのベースプロンプトにコンテキストを付加する。
-    """
-    from core.context import AppContext  # noqa: PLC0415
-    from prompts import BASE_SYSTEM_PROMPT  # noqa: PLC0415
-
-    context_lines = [
-        f"現在日時: {state.get('current_date', '')} {state.get('current_time', '')}",
-    ]
-
-    # Phase1: OSCステータスが取得できていれば追加
-    osc = state.get("osc_status")
-    if osc:
-        v = osc.get("velocity", {})
-        speed = (v.get("x", 0) ** 2 + v.get("y", 0) ** 2 + v.get("z", 0) ** 2) ** 0.5
-        context_lines.append(f"移動速度: {speed:.2f} m/s")
-
-    # sayが再生中であればLLMに通知
-    # → 再生完了前にsayを重複呼び出し・end_actionを呼ぶのを防ぐ
-    ctx = AppContext.get()
-    if ctx.say_task and not ctx.say_task.done():
-        context_lines.append(
-            "【重要】現在あなたの音声が再生中です。"
-            "再生が完了するまで say を呼び出さず、end_action も呼び出さないでください。"
-        )
-
-    context = "\n".join(context_lines)
-    return f"{BASE_SYSTEM_PROMPT}\n\n--- 現在のコンテキスト ---\n{context}"

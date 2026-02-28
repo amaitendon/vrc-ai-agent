@@ -40,7 +40,7 @@ async def main():
     ctx = AppContext.get()
     pipeline = AudioInputPipeline(ctx)
 
-    from utils.audio import get_device_name_by_index
+    from utils.audio_device import get_device_name_by_index
 
     device_name = get_device_name_by_index(pipeline.input_device)
 

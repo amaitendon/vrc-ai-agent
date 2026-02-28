@@ -12,7 +12,7 @@ from aiavatar.sts.vad.silero import SileroSpeechDetector
 from inputs.stt_faster_whisper import FasterWhisperSpeechRecognizer
 
 from core.context import AppContext, QueueEvent, PRIORITY_VOICE
-from utils.audio import get_device_index_by_name
+from utils.audio_device import get_device_index_by_name
 
 
 class AudioInputPipeline:

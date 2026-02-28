@@ -20,7 +20,7 @@ from actuators.speech import get_audio_output_pipeline
 async def main():
     load_dotenv()
 
-    from utils.audio import get_device_name_by_index
+    from utils.audio_device import get_device_name_by_index
 
     pipeline = get_audio_output_pipeline()
     device_name = get_device_name_by_index(pipeline.output_device)
