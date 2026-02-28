@@ -1,5 +1,6 @@
 from aiavatar.device import AudioDevice
 
+
 def list_devices():
     print("認識されているオーディオデバイス一覧を追加します...")
     try:
@@ -9,6 +10,7 @@ def list_devices():
     except Exception as e:
         print(f"エラーが発生しました: {e}")
         print("PyAudioが正しくインストールされているか確認してください。")
+
 
 if __name__ == "__main__":
     list_devices()

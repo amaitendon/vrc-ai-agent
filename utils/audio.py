@@ -4,7 +4,6 @@ utils/audio.py
 音声・オーディオデバイス関連のユーティリティ関数を提供します。
 """
 
-import os
 from loguru import logger
 from aiavatar.device.audio import AudioDevice
 
@@ -28,12 +27,12 @@ def get_device_index_by_name(device_name: str, is_input: bool = True) -> int:
         # AudioDevice() を使用してシステム上のすべてのオーディオデバイス情報を取得
         audio_dev = AudioDevice()
         devices = audio_dev.get_audio_devices()
-        
+
         target_name_lower = device_name.lower()
-        
+
         for d in devices:
             name = d.get("name", "").lower()
-            
+
             # 入出力の区別
             if is_input:
                 if d.get("max_input_channels", 0) == 0:
@@ -45,14 +44,20 @@ def get_device_index_by_name(device_name: str, is_input: bool = True) -> int:
             # 部分一致で検索
             if target_name_lower in name:
                 idx = d.get("index", -1)
-                logger.info(f"[AudioUtils] Found audio device containing '{device_name}': {d.get('name')} (Index: {idx})")
+                logger.info(
+                    f"[AudioUtils] Found audio device containing '{device_name}': {d.get('name')} (Index: {idx})"
+                )
                 return idx
-                
-        logger.warning(f"[AudioUtils] No audio device found containing '{device_name}' (is_input={is_input})")
+
+        logger.warning(
+            f"[AudioUtils] No audio device found containing '{device_name}' (is_input={is_input})"
+        )
         return -1
 
     except Exception as e:
-        logger.error(f"[AudioUtils] Error finding audio device by name '{device_name}': {e}")
+        logger.error(
+            f"[AudioUtils] Error finding audio device by name '{device_name}': {e}"
+        )
         return -1
 
 
@@ -62,7 +67,7 @@ def get_device_name_by_index(device_index: int) -> str:
     """
     if device_index < 0:
         return "System Default"
-        
+
     try:
         audio_dev = AudioDevice()
         devices = audio_dev.get_audio_devices()
@@ -70,6 +75,8 @@ def get_device_name_by_index(device_index: int) -> str:
             if d.get("index") == device_index:
                 return d.get("name", "Unknown")
     except Exception as e:
-        logger.error(f"[AudioUtils] Error getting device name for index {device_index}: {e}")
-        
+        logger.error(
+            f"[AudioUtils] Error getting device name for index {device_index}: {e}"
+        )
+
     return "Unknown"

@@ -31,12 +31,11 @@ async def audio_listener(ctx: AppContext) -> None:
     VAD + FasterWhisper を使って STT を行い、結果をキューに投げる。
     """
     logger.info("[audio_listener] starting real STT pipeline")
-    
+
     try:
         await setup_audio_listener(ctx)
     except Exception as e:
         logger.error(f"[audio_listener] fatal error: {e}", exc_info=True)
-
 
 
 # ── queue_loop ────────────────────────────────────────────────────────────────
@@ -78,11 +77,11 @@ async def queue_loop(ctx: AppContext) -> None:
         try:
             trimmed_messages = trim_messages(
                 persistent_state["messages"],
-                max_tokens=20, # 簡易的にメッセージ件数として扱う（token_counter未指定時のデフォルト挙動）
+                max_tokens=20,  # 簡易的にメッセージ件数として扱う（token_counter未指定時のデフォルト挙動）
                 strategy="last",
-                token_counter=len, # len関数でシンプルにリストの長さとして計算
-                include_system=False, # ここにはSystemMessageは含まれていない
-                allow_partial=False
+                token_counter=len,  # len関数でシンプルにリストの長さとして計算
+                include_system=False,  # ここにはSystemMessageは含まれていない
+                allow_partial=False,
             )
             persistent_state["messages"] = trimmed_messages
         except Exception as e:

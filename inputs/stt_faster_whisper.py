@@ -4,11 +4,13 @@ inputs/stt_faster_whisper.py
 faster-whisperを用いたローカル完結の音声認識（STT）の実装。
 aiavatarkitのSpeechRecognizerを基底クラスとして作成しています。
 """
+
 import asyncio
 from typing import List
 import numpy as np
 from faster_whisper import WhisperModel
 from aiavatar.sts.stt.base import SpeechRecognizer
+
 
 class FasterWhisperSpeechRecognizer(SpeechRecognizer):
     def __init__(
@@ -23,7 +25,7 @@ class FasterWhisperSpeechRecognizer(SpeechRecognizer):
         max_keepalive_connections: int = 20,
         timeout: float = 10.0,
         sample_rate: int = 16000,
-        debug: bool = False
+        debug: bool = False,
     ):
         super().__init__(
             language=language,
@@ -31,7 +33,7 @@ class FasterWhisperSpeechRecognizer(SpeechRecognizer):
             max_connections=max_connections,
             max_keepalive_connections=max_keepalive_connections,
             timeout=timeout,
-            debug=debug
+            debug=debug,
         )
         self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
         self.sample_rate = sample_rate
@@ -43,10 +45,10 @@ class FasterWhisperSpeechRecognizer(SpeechRecognizer):
 
         # Run transcription in a separate thread to avoid blocking the event loop
         loop = asyncio.get_event_loop()
-        
+
         def _transcribe_blocking():
             segs, _ = self.model.transcribe(audio_np, language=self.language)
             return "".join([segment.text for segment in segs])
-            
+
         text = await loop.run_in_executor(None, _transcribe_blocking)
         return text
