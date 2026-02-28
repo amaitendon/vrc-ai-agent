@@ -32,7 +32,7 @@ def _build_system_prompt(state: AgentState) -> str:
     if ctx.say_task and not ctx.say_task.done():
         context_lines.append(
             "【重要】現在あなたの音声が再生中です。"
-            "再生が完了するまで say を呼び出さず、end_action も呼び出さないでください。"
+            "再生が完了するまで say を呼び出さないでください。"
         )
 
     context = "\n".join(context_lines)
@@ -58,7 +58,17 @@ async def think(state: AgentState) -> dict:
     messages = state["messages"]
 
     logger.debug(f"[think] invoking LLM, message_count={len(messages)}")
+    
+    # 最新の入力メッセージ(差分)をチャットログへ出力
+    if messages:
+        last_msg = messages[-1]
+        logger.bind(chat=True).info(last_msg.model_dump_json())
+
     response: AIMessage = await llm.ainvoke([system_msg] + messages)
+    
+    # レスポンス内容(思考＋ツールコールの差分)をチャットログへ出力
+    logger.bind(chat=True).info(response.model_dump_json())
+
     logger.debug(
         f"[think] response tool_calls={[tc['name'] for tc in response.tool_calls]}"
     )
