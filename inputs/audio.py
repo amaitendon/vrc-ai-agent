@@ -42,7 +42,13 @@ class AudioInputPipeline:
 
         # VADのセットアップ (aiavatarkit)
         # ※ローカル版の SileroSpeechDetector は device_index を直接受け取らない仕様
-        self.vad = SileroSpeechDetector(debug=True)
+        self.vad = SileroSpeechDetector(
+            debug=True,
+            silence_duration_threshold=0.7,  # 発話終了と判定する無音区間(秒)。。デフォルト0.5
+            min_duration=0.3,              # 短い音は発話として扱わない。デフォルト0.2
+            # volume_db_threshold=-40.0,     # 指定した音量(dB)より小さい音は無視する。デフォルトNone
+            # speech_probability_threshold=0.7 # 声の判定確率のしきい値。デフォルト0.5
+        )
 
         # STTのセットアップ (Faster-Whisper)
         # TODO: モデルサイズ等は必要に応じて.env化する
