@@ -29,7 +29,7 @@ BASE_SYSTEM_PROMPT = """
 
 ## [Tools]
 - say: VRChat内で音声として発声する。
-- end_action: 会話・行動が一区切りついたら呼び出す
+- end_action: ユーザーの応答を待つとき使う
 
 
 """.strip()

@@ -133,9 +133,9 @@ if __name__ == "__main__":
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
 
-    # # デフォルトの標準出力ハンドラの設定変更
-    # logger.remove()
-    # logger.add(sys.stderr, filter=lambda record: "chat" not in record["extra"])
+    # デフォルトの標準出力ハンドラの設定変更
+    logger.remove()
+    logger.add(sys.stderr, filter=lambda record: "chat" not in record["extra"])
 
     # 通常のログファイルの設定 (例: 2026-02-28-1309.log)
     log_filename = datetime.now().strftime("%Y-%m-%d-%H%M.log")

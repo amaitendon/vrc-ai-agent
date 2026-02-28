@@ -97,7 +97,7 @@ async def say(text: str) -> str:
     try:
         audio_data = await pipeline.tts.synthesize(text)
     except Exception as e:
-        logger.error(f"[say] TTS synthesis failed: {e}")
+        logger.exception(f"[say] TTS synthesis failed: {e}")
         return f"failed to synthesize speech: {e}"
 
     # 2. 再生キューへ投入

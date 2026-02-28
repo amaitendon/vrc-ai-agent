@@ -12,7 +12,7 @@ from actuators.speech import say
 def end_action() -> str:
     """
     現在の行動サイクルを終了する。
-    会話への応答が完了した、またはこれ以上行動が不要と判断したときに呼ぶ。
+    ユーザーからの応答を待つ、またはこれ以上行動が不要と判断したときに呼ぶ。
     """
     return "action_ended"
 
