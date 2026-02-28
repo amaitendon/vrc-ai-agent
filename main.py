@@ -127,4 +127,13 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+
+    # ログファイルの設定 (例: 2026-02-28-1309.log)
+    log_filename = datetime.now().strftime("%Y-%m-%d-%H%M.log")
+    logger.add(log_dir / log_filename, enqueue=True)
+
     asyncio.run(main())
