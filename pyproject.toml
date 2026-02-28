@@ -14,6 +14,9 @@ dependencies = [
     "langchain-litellm>=0.5.1",
     "langchain-core>=1.2.16",
     "requests>=2.32.5",
+    "tiktoken",
+    "transformers",
+    "aiavatar",
 ]
 
 [dependency-groups]
@@ -25,3 +28,6 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+aiavatar = { path = "./lib/aiavatarkit" }
