@@ -12,7 +12,6 @@ lib/
 # ログ・一時ファイル
 logs/
 *.log
-test_out.txt
 
 # IDE・ツールキャッシュ
 .vscode/
