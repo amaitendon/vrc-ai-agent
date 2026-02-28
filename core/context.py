@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from core.types import OscStatus, Vector3
 
@@ -30,9 +31,23 @@ class AppContext:
             angular_y=0.0,
         )
     )
+    _background_tasks: set[asyncio.Task] = field(
+        default_factory=set, init=False, repr=False
+    )
 
     # シングルトン
-    _instance: AppContext | None = None
+    _instance: ClassVar[AppContext | None] = None
+
+    def spawn_background_task(self, coro) -> asyncio.Task:
+        """
+        グラフの外側のループに属する独立したタスクとして生成する。
+        強参照をセットで保持しGCから守る。
+        """
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     @classmethod
     def get(cls) -> AppContext:

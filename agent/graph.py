@@ -19,8 +19,9 @@ from loguru import logger
 from agent.state import AgentState
 
 # ── ツール定義（各モジュールが実装後にここへインポートして追加する） ──────────
+from actuators.speech import say
+
 # Phase1で追加予定:
-#   from actuators.speech import say
 #   from actuators.chat import chat
 #   from actuators.movement import move
 #   from memory.long_term import save_memory
@@ -39,7 +40,7 @@ def end_action() -> str:
 # ツールを追加するときはこのリストに足すだけでグラフ構造は変わらない
 TOOLS = [
     end_action,
-    # say,
+    say,
     # chat,
     # move,
     # save_memory,
