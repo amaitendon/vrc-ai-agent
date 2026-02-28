@@ -32,7 +32,7 @@ def _build_system_prompt(state: AgentState) -> str:
     if ctx.say_task and not ctx.say_task.done():
         context_lines.append(
             "【重要】現在あなたの音声が再生中です。"
-            "再生が完了するまで say を呼び出さず、end_action も呼び出さないでください。"
+            "再生が完了するまで say を呼び出さないでください。"
         )
 
     context = "\n".join(context_lines)
