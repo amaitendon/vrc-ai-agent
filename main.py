@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+import os
+
 from langchain_core.messages import HumanMessage, trim_messages
 from loguru import logger
 
 from agent.graph import build_graph
 from agent.state import AgentState
+from agent.llm import get_llm
 from inputs.audio import setup_audio_listener
 from core.context import AppContext, QueueEvent
 
@@ -72,18 +75,31 @@ async def queue_loop(ctx: AppContext) -> None:
         # 割り込み考慮後メッセージを追加
         persistent_state["messages"].append(user_message)
 
-        # トークン（メッセージ数）の上限管理 (最新10往復=約20メッセージ程度を残す)
-        # trim_messagesを用いて、システムプロンプト等を含まない生の履歴リストを切り詰める
+        # トークン（メッセージ数）の上限管理
+        # trim_messagesを用いて、設定されたトークン数に収まるように履歴リストを切り詰める
         try:
+            # llm インスタンスを取得してトークン数を計算
+            llm = get_llm()
+            max_tokens = int(os.environ.get("MAX_HISTORY_TOKENS", 4000))
+
+            # トリム前のトークン数をログ出力（デバッグ用）
+            pre_tokens = llm.get_num_tokens_from_messages(persistent_state["messages"])
+            logger.debug(f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}")
+
             trimmed_messages = trim_messages(
                 persistent_state["messages"],
-                max_tokens=20,  # 簡易的にメッセージ件数として扱う（token_counter未指定時のデフォルト挙動）
+                max_tokens=max_tokens,
                 strategy="last",
-                token_counter=len,  # len関数でシンプルにリストの長さとして計算
+                token_counter=llm.get_num_tokens_from_messages,
                 include_system=False,  # ここにはSystemMessageは含まれていない
                 allow_partial=False,
             )
             persistent_state["messages"] = trimmed_messages
+
+            # トリム後のトークン数をログ出力
+            post_tokens = llm.get_num_tokens_from_messages(persistent_state["messages"])
+            logger.debug(f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}")
+
         except Exception as e:
             logger.warning(f"[queue_loop] trim_messages error: {e}")
 
