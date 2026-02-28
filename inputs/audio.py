@@ -5,6 +5,7 @@ inputs/audio.py
 メインの優先度付きキューへエンキューする処理を提供する。
 """
 
+import asyncio
 import os
 from loguru import logger
 
@@ -45,7 +46,7 @@ class AudioInputPipeline:
         self.vad = SileroSpeechDetector(
             debug=True,
             silence_duration_threshold=0.7,  # 発話終了と判定する無音区間(秒)。。デフォルト0.5
-            min_duration=0.3,              # 短い音は発話として扱わない。デフォルト0.2
+            min_duration=0.3,  # 短い音は発話として扱わない。デフォルト0.2
             # volume_db_threshold=-40.0,     # 指定した音量(dB)より小さい音は無視する。デフォルトNone
             # speech_probability_threshold=0.7 # 声の判定確率のしきい値。デフォルト0.5
         )
@@ -60,6 +61,22 @@ class AudioInputPipeline:
 
         # 発話検知時のフックを登録 (メソッド呼び出しで登録)
         self.vad.on_speech_detected(self._on_speech_detected)
+
+        # 話者識別ゲートのセットアップ
+        self.speaker_registry = None
+        if os.getenv("SPEAKER_GATE_ENABLED", "false").lower() == "true":
+            from aiavatar.sts.stt.speaker_registry.base import SpeakerRegistry
+            from inputs.speaker_store_sqlite import SQLiteSpeakerStore
+
+            db_path = os.getenv("SPEAKER_GATE_DB_PATH", "data/speakers.db")
+            threshold = float(os.getenv("SPEAKER_GATE_THRESHOLD", "0.72"))
+            self.speaker_registry = SpeakerRegistry(
+                match_threshold=threshold,
+                store=SQLiteSpeakerStore(db_path),
+            )
+            logger.info(
+                f"[AudioInputPipeline] SpeakerGate enabled. db={db_path}, threshold={threshold}"
+            )
 
     def _has_cuda(self) -> bool:
         """簡単なCUDA利用可否チェック（精度は必要に応じて調整）"""
@@ -87,6 +104,28 @@ class AudioInputPipeline:
         )
 
         try:
+            # 話者識別ゲートによるフィルタリング
+            if self.speaker_registry is not None:
+                gate_result = await asyncio.to_thread(
+                    self.speaker_registry.match_topk_from_pcm,
+                    audio_data,
+                    self.vad.sample_rate,
+                )
+                label = gate_result.chosen.metadata.get(
+                    "label", gate_result.chosen.speaker_id
+                )
+                logger.debug(
+                    f"[SpeakerGate] speaker={label}, "
+                    f"is_new={gate_result.chosen.is_new}, "
+                    f"sim={gate_result.chosen.similarity:.3f}"
+                )
+                if gate_result.chosen.is_new:
+                    logger.info("[SpeakerGate] Unknown speaker. Ignoring.")
+                    return
+                logger.info(
+                    f"[SpeakerGate] Accepted: {label} (sim={gate_result.chosen.similarity:.3f})"
+                )
+
             # STTを実行
             # ※FasterWhisperSpeechRecognizer.transcribe は内部で run_in_executor を使いノンブロッキングに設計されている
             text = await self.stt.transcribe(audio_data)

@@ -84,7 +84,9 @@ async def queue_loop(ctx: AppContext) -> None:
 
             # トリム前のトークン数をログ出力（デバッグ用）
             pre_tokens = llm.get_num_tokens_from_messages(persistent_state["messages"])
-            logger.debug(f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}")
+            logger.debug(
+                f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}"
+            )
 
             trimmed_messages = trim_messages(
                 persistent_state["messages"],
@@ -98,7 +100,9 @@ async def queue_loop(ctx: AppContext) -> None:
 
             # トリム後のトークン数をログ出力
             post_tokens = llm.get_num_tokens_from_messages(persistent_state["messages"])
-            logger.debug(f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}")
+            logger.debug(
+                f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}"
+            )
 
         except Exception as e:
             logger.warning(f"[queue_loop] trim_messages error: {e}")

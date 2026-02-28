@@ -17,6 +17,8 @@ dependencies = [
     "tiktoken",
     "transformers",
     "aiavatar",
+    "resemblyzer",
+    "setuptools>=82.0.0",
 ]
 
 [dependency-groups]
