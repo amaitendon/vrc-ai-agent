@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from core.context import AppContext
 from actuators.speech import say, _wait_for_playback
 
+
 @pytest.fixture(autouse=True)
 def reset_app_context():
     """Each test gets a fresh AppContext."""
@@ -62,7 +63,7 @@ async def test_say_tool_normal_flow(mock_sleep, mock_pipeline):
 
     # Check that sleep was called with 2.0 seconds
     mock_sleep.assert_called_once_with(2.0)
-    
+
     # To check done callback, we need a real asyncio.sleep tick.
     # Since sleep is mocked, we can't easily wait, so we'll just check
     # if it's removed (it usually is by this point).
@@ -74,12 +75,12 @@ async def test_say_tool_normal_flow(mock_sleep, mock_pipeline):
 async def test_say_tool_fallback_duration(mock_sleep, mock_pipeline):
     # Pass invalid wav data
     mock_pipeline.tts.synthesize.return_value = b"invalid wav data"
-    
+
     await say.ainvoke({"text": "Fallback"})
-    
+
     ctx = AppContext.get()
     await ctx.say_task
-    
+
     # 16 bytes invalid data -> (16 - 44) < 0 -> clamped to 0.0 sec
     mock_sleep.assert_called_once_with(0.0)
 
@@ -87,17 +88,17 @@ async def test_say_tool_fallback_duration(mock_sleep, mock_pipeline):
 @pytest.mark.asyncio
 async def test_wait_for_playback_cancellation():
     mock_player = MagicMock()
-    
+
     # Run _wait_for_playback in a task
     task = asyncio.create_task(_wait_for_playback(10.0, mock_player))
-    
+
     # Yield to let the task start sleeping
     await asyncio.sleep(0.01)
-    
+
     # Cancel the task
     task.cancel()
-    
+
     with pytest.raises(asyncio.CancelledError):
         await task
-        
+
     mock_player.stop.assert_called_once()
