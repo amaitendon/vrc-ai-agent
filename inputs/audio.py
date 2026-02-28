@@ -13,6 +13,7 @@ from aiavatar.sts.vad.silero import SileroSpeechDetector
 from inputs.stt_faster_whisper import FasterWhisperSpeechRecognizer
 
 from core.context import AppContext, QueueEvent, PRIORITY_VOICE
+from utils.audio import get_device_index_by_name
 
 
 class AudioInputPipeline:
@@ -25,9 +26,16 @@ class AudioInputPipeline:
     def __init__(self, ctx: AppContext):
         self.ctx = ctx
         
-        # デバイスIDの取得（.envで指定されていなければデフォルトデバイスを使用）
+        # 入力デバイスの解決 (ID優先、次に名前)
         device_index_str = os.getenv("AUDIO_INPUT_DEVICE_INDEX", "")
-        self.input_device = int(device_index_str) if device_index_str.isdigit() else -1
+        device_name_str = os.getenv("AUDIO_INPUT_DEVICE_NAME", "")
+        
+        if device_index_str.isdigit() and int(device_index_str) >= 0:
+            self.input_device = int(device_index_str)
+        elif device_name_str:
+            self.input_device = get_device_index_by_name(device_name_str, is_input=True)
+        else:
+            self.input_device = -1
 
         logger.info(f"[AudioInputPipeline] Initializing with input device index: {self.input_device}")
 

@@ -9,6 +9,7 @@ from loguru import logger
 
 from aiavatar.sts.tts.voicevox import VoicevoxSpeechSynthesizer
 from aiavatar.device.audio import AudioPlayer
+from utils.audio import get_device_index_by_name
 
 
 class AudioOutputPipeline:
@@ -17,9 +18,16 @@ class AudioOutputPipeline:
     TTS (Voicevox) -> AudioPlayer の制御基盤。
     """
     def __init__(self):
-        # デバイスIDの取得（.envで指定されていなければデフォルトデバイスを使用）
+        # 出力デバイスの解決 (ID優先、次に名前)
         device_index_str = os.getenv("AUDIO_OUTPUT_DEVICE_INDEX", "")
-        self.output_device = int(device_index_str) if device_index_str.isdigit() else -1
+        device_name_str = os.getenv("AUDIO_OUTPUT_DEVICE_NAME", "")
+        
+        if device_index_str.isdigit() and int(device_index_str) >= 0:
+            self.output_device = int(device_index_str)
+        elif device_name_str:
+            self.output_device = get_device_index_by_name(device_name_str, is_input=False)
+        else:
+            self.output_device = -1
 
         logger.info(f"[AudioOutputPipeline] Initializing with output device index: {self.output_device}")
 
