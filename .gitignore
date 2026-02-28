@@ -1,0 +1,20 @@
+# 環境・秘密情報
+.env
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# ビルド・依存
+lib/
+
+# ログ・一時ファイル
+logs/
+*.log
+test_out.txt
+
+# IDE・ツールキャッシュ
+.vscode/
+.ruff_cache/
+.pytest_cache/
