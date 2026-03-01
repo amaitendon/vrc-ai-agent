@@ -5,13 +5,13 @@ tests/manual_register_speaker.py
 
 使い方:
     # 登録
-    uv run python tests/manual_register_speaker.py --label "User" --duration 5
+    uv run python utils/manual_register_speaker.py --label "User" --duration 5
 
     # 一覧
-    uv run python tests/manual_register_speaker.py --list
+    uv run python utils/manual_register_speaker.py --list
 
     # 削除
-    uv run python tests/manual_register_speaker.py --delete <speaker_id>
+    uv run python utils/manual_register_speaker.py --delete <speaker_id>
 """
 
 import argparse
