@@ -3,6 +3,7 @@ from langchain_core.tools import tool
 from actuators.speech import say
 from actuators.chat_box import chat_box
 from actuators.movement import move, look_direction, jump
+from inputs.vision import get_current_view
 # from memory.long_term import save_memory
 
 
@@ -24,5 +25,6 @@ TOOLS = [
     move,
     look_direction,
     jump,
+    get_current_view,
     # save_memory,
 ]
