@@ -122,7 +122,9 @@ class AudioInputPipeline:
                 )
                 if gate_result.chosen.is_new:
                     name = "Unknown"
-                    logger.info(f"[SpeakerGate] Unknown speaker detected: {gate_result.chosen.speaker_id}")
+                    logger.info(
+                        f"[SpeakerGate] Unknown speaker detected: {gate_result.chosen.speaker_id}"
+                    )
                 else:
                     name = gate_result.chosen.metadata.get("label", "Unknown")
                     logger.info(
