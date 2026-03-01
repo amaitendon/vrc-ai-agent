@@ -57,13 +57,13 @@ async def move(direction: str, duration: float = 1.0) -> str:
 
 
 @tool
-async def look_direction(direction: str, duration: float = 1.0) -> str:
+async def look_direction(direction: str, duration: float = 0.5) -> str:
     """
     指定した方向にアバターの視点を向ける。
 
     Args:
         direction (str): 'left', 'right' のいずれか
-        duration (float): 視点を動かす秒数（デフォルト: 1.0）
+        duration (float): 視点を動かす秒数。0.5[s]で約90度回転
     """
     valid_directions = {
         "left": "/input/LookLeft",
