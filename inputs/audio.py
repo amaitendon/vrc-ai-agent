@@ -104,6 +104,7 @@ class AudioInputPipeline:
         )
 
         try:
+            speaker_prefix = ""
             # 話者識別ゲートによるフィルタリング
             if self.speaker_registry is not None:
                 gate_result = await asyncio.to_thread(
@@ -120,11 +121,14 @@ class AudioInputPipeline:
                     f"sim={gate_result.chosen.similarity:.3f}"
                 )
                 if gate_result.chosen.is_new:
-                    logger.info("[SpeakerGate] Unknown speaker. Ignoring.")
-                    return
-                logger.info(
-                    f"[SpeakerGate] Accepted: {label} (sim={gate_result.chosen.similarity:.3f})"
-                )
+                    name = "Unknown"
+                    logger.info(f"[SpeakerGate] Unknown speaker detected: {gate_result.chosen.speaker_id}")
+                else:
+                    name = gate_result.chosen.metadata.get("label", "Unknown")
+                    logger.info(
+                        f"[SpeakerGate] Identified: {label} (sim={gate_result.chosen.similarity:.3f})"
+                    )
+                speaker_prefix = f"[{name} {gate_result.chosen.speaker_id}]: "
 
             # STTを実行
             # ※FasterWhisperSpeechRecognizer.transcribe は内部で run_in_executor を使いノンブロッキングに設計されている
@@ -136,6 +140,9 @@ class AudioInputPipeline:
                     "[AudioInputPipeline] Transcription result is empty. Ignoring."
                 )
                 return
+
+            if speaker_prefix:
+                text = f"{speaker_prefix}{text}"
 
             logger.info(f"[AudioInputPipeline] Transcription result: {text}")
 
