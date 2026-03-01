@@ -102,4 +102,3 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
     builder.add_conditional_edges("tools", route_after_tools)
 
     return builder.compile()
-

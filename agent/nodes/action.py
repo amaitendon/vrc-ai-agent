@@ -3,7 +3,7 @@ from langchain_core.tools import tool
 from actuators.speech import say
 
 # Phase1で追加予定:
-#   from actuators.chat_box import chat
+from actuators.chat_box import chat_box
 #   from actuators.movement import move
 #   from memory.long_term import save_memory
 
@@ -22,7 +22,6 @@ def end_action() -> str:
 TOOLS = [
     end_action,
     say,
-    # chat,
-    # move,
+    chat_box,
     # save_memory,
 ]
