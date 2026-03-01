@@ -2,6 +2,8 @@ import os
 import time
 import base64
 from io import BytesIO
+from pathlib import Path
+from datetime import datetime
 import numpy as np
 from PIL import Image
 from langchain_core.tools import tool
@@ -12,6 +14,31 @@ try:
 except ImportError:
     logger.warning("SpoutGL is not installed. Spout vision tool will not work.")
     SpoutGL = None
+
+
+def _save_debug_image(image_bytes: bytes) -> str | None:
+    """
+    加工済みの画像（JPEGバイト列）をデバッグ用にファイルとして保存する。
+    """
+    # SAVE_VISION_LOGS が 0 の場合は保存しない (デフォルトは 1: 有効)
+    if os.environ.get("SAVE_VISION_LOGS", "1") == "0":
+        return None
+
+    try:
+        log_dir = Path(os.environ.get("VISION_LOG_DIR", "logs"))
+        log_dir.mkdir(exist_ok=True, parents=True)
+
+        filename = datetime.now().strftime("vision_%Y%m%d_%H%M%S.jpg")
+        save_path = log_dir / filename
+
+        with open(save_path, "wb") as f:
+            f.write(image_bytes)
+
+        logger.debug(f"[vision] Saved debug image to: {save_path}")
+        return str(save_path)
+    except Exception as e:
+        logger.error(f"[vision] Failed to save debug image: {e}")
+        return None
 
 
 def capture_spout_frame(
@@ -102,9 +129,13 @@ def process_image_for_llm(image: Image.Image, max_width: int = 800) -> str:
     # JPEG形式でメモリバッファに保存
     buffered = BytesIO()
     image.save(buffered, format="JPEG", quality=85)
+    jpeg_bytes = buffered.getvalue()
+
+    # デバッグ用に実際にLLMに送られる画像データを保存
+    _save_debug_image(jpeg_bytes)
 
     # Base64エンコード
-    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    img_str = base64.b64encode(jpeg_bytes).decode("utf-8")
     return img_str
 
 
