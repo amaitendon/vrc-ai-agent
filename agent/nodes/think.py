@@ -1,42 +1,11 @@
 from datetime import datetime
 
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from loguru import logger
 
 from agent.nodes.action import TOOLS
 from agent.state import AgentState
-
-
-def _build_system_prompt(state: AgentState) -> str:
-    """
-    外部コンテキストを含むシステムプロンプトを動的に生成する。
-    prompts.pyのベースプロンプトにコンテキストを付加する。
-    """
-    from core.context import AppContext  # noqa: PLC0415
-    from prompts.prompts import BASE_SYSTEM_PROMPT  # noqa: PLC0415
-
-    context_lines = [
-        f"現在日時: {state.get('current_date', '')} {state.get('current_time', '')}",
-    ]
-
-    # Phase1: OSCステータスが取得できていれば追加
-    osc = state.get("osc_status")
-    if osc:
-        v = osc.get("velocity", {})
-        speed = (v.get("x", 0) ** 2 + v.get("y", 0) ** 2 + v.get("z", 0) ** 2) ** 0.5
-        context_lines.append(f"移動速度: {speed:.2f} m/s")
-
-    # sayが再生中であればLLMに通知
-    # → 再生完了前にsayを重複呼び出し・end_actionを呼ぶのを防ぐ
-    ctx = AppContext.get()
-    if ctx.say_task and not ctx.say_task.done():
-        context_lines.append(
-            "【重要】現在あなたの音声が再生中です。"
-            "再生が完了するまで say を呼び出さないでください。"
-        )
-
-    context = "\n".join(context_lines)
-    return f"{BASE_SYSTEM_PROMPT}\n\n--- 現在のコンテキスト ---\n{context}"
+from prompts.prompts import BASE_SYSTEM_PROMPT
 
 
 async def think(state: AgentState) -> dict:
@@ -45,22 +14,27 @@ async def think(state: AgentState) -> dict:
     ツールを呼ぶか / end_actionを呼ぶか / （将来）ハートビートに応じた行動を決める。
     思考内容の素テキストはVRCへ渡さない（ToolNode経由でのみ外部に出る）。
     """
-    from agent.llm import get_llm  # 循環import回避のためここでimport
+    from langchain_core.messages import HumanMessage  # noqa: PLC0415
+    from agent.llm import get_llm  # 循環import回避のためここで import # noqa: PLC0415
+    from core.context import AppContext  # noqa: PLC0415
 
     llm = get_llm().bind_tools(TOOLS)
 
-    # 外部コンテキストをシステムプロンプトへ動的に差し込む
-    system_content = _build_system_prompt(state)
-    system_msg = SystemMessage(content=system_content)
+    system_msg = SystemMessage(content=BASE_SYSTEM_PROMPT)
 
     # trim_messagesはPhase1（STEP3）で実装後、ここで適用する
     # messages = trim_messages(state["messages"], ...)
     messages = state["messages"]
 
+    # say再生中なら一時的なメッセージを差し込む（履歴には残さない）
+    ctx = AppContext.get()
+    if ctx.say_task and not ctx.say_task.done():
+        messages = messages + [HumanMessage(content="【システム】現在say発声中です。")]
+
     logger.debug(f"[think] invoking LLM, message_count={len(messages)}")
 
     # 最新の入力メッセージ(差分)をチャットログへ出力
-    if messages:
+    if not isinstance(messages[-1], ToolMessage):
         last_msg = messages[-1]
         logger.bind(chat=True).info(last_msg.model_dump_json())
 

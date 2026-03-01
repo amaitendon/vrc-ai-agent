@@ -7,6 +7,7 @@ inputs/audio.py
 
 import asyncio
 import os
+from datetime import datetime
 from loguru import logger
 
 from aiavatar.sts.vad.silero import SileroSpeechDetector
@@ -143,8 +144,12 @@ class AudioInputPipeline:
                 )
                 return
 
+            # タイムスタンプ付与 [HH:MM:SS]
+            timestamp = datetime.now().strftime("[%H:%M:%S]")
             if speaker_prefix:
-                text = f"{speaker_prefix}{text}"
+                text = f"{timestamp} {speaker_prefix}{text}"
+            else:
+                text = f"{timestamp}: {text}"
 
             logger.info(f"[AudioInputPipeline] Transcription result: {text}")
 
