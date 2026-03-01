@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 
+from datetime import datetime
+
 from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -19,7 +21,25 @@ from agent.nodes.inject_context import inject_context
 from agent.nodes.think import think
 from agent.state import AgentState
 
-tool_node = ToolNode(TOOLS)
+_tool_node = ToolNode(TOOLS)
+
+
+async def tool_node_with_timestamp(state):
+    """
+    ツール実行ノードのラッパー。
+    実行結果（ToolMessage）のコンテンツの先頭に実行時刻のタイムスタンプを付与する。
+    """
+    result = await _tool_node.ainvoke(state)
+    now = datetime.now().strftime("%H:%M:%S")
+    timestamped = []
+    for msg in result["messages"]:
+        if isinstance(
+            msg.content, str
+        ):  # 文字列のときのみ追加（画像などlistの場合はスキップ）
+            msg.content = f"[{now}] {msg.content}"
+        logger.bind(chat=True).info(msg.model_dump_json())
+        timestamped.append(msg)
+    return {"messages": timestamped}
 
 
 # ── 条件分岐 ─────────────────────────────────────────────────────────────────
@@ -73,7 +93,7 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
         # end_actionが実行されていたらEND
         if (
             isinstance(last_message, ToolMessage)
-            and last_message.content == "action_ended"
+            and "action_ended" in last_message.content
         ):
             logger.debug("[route_after_tools] end_action executed → END")
             return END
@@ -91,7 +111,7 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
     # ノード登録
     builder.add_node("inject_context", inject_context)
     builder.add_node("think", think)
-    builder.add_node("tools", tool_node)
+    builder.add_node("tools", tool_node_with_timestamp)
 
     # エントリーポイント
     builder.set_entry_point("inject_context")
