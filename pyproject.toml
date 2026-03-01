@@ -19,6 +19,7 @@ dependencies = [
     "aiavatar",
     "resemblyzer",
     "setuptools>=82.0.0",
+    "mcp>=1.26.0",
 ]
 
 [dependency-groups]
