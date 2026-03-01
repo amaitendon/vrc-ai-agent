@@ -58,7 +58,9 @@ class SQLiteSpeakerStore(BaseSpeakerStore):
                     )
                 """)
                 if self.embedding_dim is not None:
-                    row = self._conn.execute("SELECT dim FROM speakers LIMIT 1").fetchone()
+                    row = self._conn.execute(
+                        "SELECT dim FROM speakers LIMIT 1"
+                    ).fetchone()
                     if row is not None and row["dim"] != self.embedding_dim:
                         raise ValueError(
                             f"DB has existing embeddings with dim={row['dim']}, "
@@ -89,7 +91,9 @@ class SQLiteSpeakerStore(BaseSpeakerStore):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         if self.embedding_dim is not None and embedding.shape[0] != self.embedding_dim:
-            raise ValueError(f"Expected embedding dim {self.embedding_dim}, got {embedding.shape[0]}")
+            raise ValueError(
+                f"Expected embedding dim {self.embedding_dim}, got {embedding.shape[0]}"
+            )
 
         emb_f32 = embedding.astype(np.float32, copy=False)
         blob = emb_f32.tobytes()
@@ -159,7 +163,7 @@ class SQLiteSpeakerStore(BaseSpeakerStore):
             rows = self._conn.execute(
                 "SELECT id, embedding, dim, metadata FROM speakers"
             ).fetchall()
-        
+
         results = []
         for row in rows:
             emb = self._from_blob(row["embedding"], row["dim"])
@@ -178,7 +182,9 @@ class SQLiteSpeakerStore(BaseSpeakerStore):
         話者数が少ない前提なので全件スキャンで問題ない。
         """
         with self._lock:
-            rows = self._conn.execute("SELECT id, embedding, dim FROM speakers").fetchall()
+            rows = self._conn.execute(
+                "SELECT id, embedding, dim FROM speakers"
+            ).fetchall()
 
         if not rows:
             raise RuntimeError("SQLiteSpeakerStore is empty.")
@@ -190,14 +196,14 @@ class SQLiteSpeakerStore(BaseSpeakerStore):
             embs.append(self._from_blob(row["embedding"], row["dim"]))
 
         matrix = np.vstack(embs).astype(np.float32)  # (N, D)
-        
+
         # コサイン類似度のために正規化
         q = q_norm.astype(np.float32)
         q = q / (np.linalg.norm(q) + 1e-9)
-        
+
         norms = np.linalg.norm(matrix, axis=1, keepdims=True) + 1e-9
         matrix_normed = matrix / norms
-        
+
         sims = matrix_normed @ q  # (N,)
 
         k = max(1, min(k, len(sids)))

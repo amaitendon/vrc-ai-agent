@@ -1,11 +1,9 @@
 from langchain_core.tools import tool
 
 from actuators.speech import say
-
-# Phase1で追加予定:
 from actuators.chat_box import chat_box
-#   from actuators.movement import move
-#   from memory.long_term import save_memory
+from actuators.movement import move, look_direction, jump
+# from memory.long_term import save_memory
 
 
 @tool
@@ -23,5 +21,8 @@ TOOLS = [
     end_action,
     say,
     chat_box,
+    move,
+    look_direction,
+    jump,
     # save_memory,
 ]
