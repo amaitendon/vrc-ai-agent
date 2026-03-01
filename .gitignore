@@ -1,6 +1,7 @@
 # 環境・秘密情報
 .env
 .venv/
+data
 
 # Python
 __pycache__/
