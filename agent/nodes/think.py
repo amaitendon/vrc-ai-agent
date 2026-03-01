@@ -13,7 +13,7 @@ def _build_system_prompt(state: AgentState) -> str:
     prompts.pyのベースプロンプトにコンテキストを付加する。
     """
     from core.context import AppContext  # noqa: PLC0415
-    from prompts import BASE_SYSTEM_PROMPT  # noqa: PLC0415
+    from prompts.prompts import BASE_SYSTEM_PROMPT  # noqa: PLC0415
 
     context_lines = [
         f"現在日時: {state.get('current_date', '')} {state.get('current_time', '')}",

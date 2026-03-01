@@ -2,6 +2,7 @@
 .env
 .venv/
 data
+prompts
 
 # Python
 __pycache__/
