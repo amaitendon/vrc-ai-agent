@@ -20,7 +20,7 @@ from loguru import logger
 
 from agent.graph import build_graph
 from agent.state import AgentState
-from agent.llm import get_llm
+from agent.llm import get_llm, count_tokens_locally
 from inputs.audio import setup_audio_listener
 from core.context import AppContext, QueueEvent
 
@@ -78,12 +78,10 @@ async def queue_loop(ctx: AppContext) -> None:
         # トークン（メッセージ数）の上限管理
         # trim_messagesを用いて、設定されたトークン数に収まるように履歴リストを切り詰める
         try:
-            # llm インスタンスを取得してトークン数を計算
-            llm = get_llm()
             max_tokens = int(os.environ.get("MAX_HISTORY_TOKENS", 4000))
 
-            # トリム前のトークン数をログ出力（デバッグ用）
-            pre_tokens = llm.get_num_tokens_from_messages(persistent_state["messages"])
+            # ローカル計算を用いたトークン数計算
+            pre_tokens = count_tokens_locally(persistent_state["messages"])
             logger.debug(
                 f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}"
             )
@@ -92,14 +90,14 @@ async def queue_loop(ctx: AppContext) -> None:
                 persistent_state["messages"],
                 max_tokens=max_tokens,
                 strategy="last",
-                token_counter=llm.get_num_tokens_from_messages,
+                token_counter=count_tokens_locally,
                 include_system=False,  # ここにはSystemMessageは含まれていない
                 allow_partial=False,
             )
             persistent_state["messages"] = trimmed_messages
 
             # トリム後のトークン数をログ出力
-            post_tokens = llm.get_num_tokens_from_messages(persistent_state["messages"])
+            post_tokens = count_tokens_locally(persistent_state["messages"])
             logger.debug(
                 f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}"
             )
