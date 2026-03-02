@@ -5,7 +5,7 @@ from loguru import logger
 
 from agent.nodes.action import TOOLS
 from agent.state import AgentState
-from prompts.prompts import BASE_SYSTEM_PROMPT
+from prompts.prompts import BASE_SYSTEM_PROMPT, SYSTEM_MESSAGE_SAY
 
 
 async def think(state: AgentState) -> dict:
@@ -29,7 +29,7 @@ async def think(state: AgentState) -> dict:
     # say再生中なら一時的なメッセージを差し込む（履歴には残さない）
     ctx = AppContext.get()
     if ctx.say_task and not ctx.say_task.done():
-        messages = messages + [HumanMessage(content="【システム】現在say発声中です。")]
+        messages = messages + [HumanMessage(content=SYSTEM_MESSAGE_SAY)]
 
     logger.debug(f"[think] invoking LLM, message_count={len(messages)}")
 
