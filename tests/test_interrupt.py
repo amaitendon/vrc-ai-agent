@@ -25,14 +25,23 @@ async def test_audio_input_pipeline_voice_interrupt():
     pipeline.stt.transcribe = AsyncMock(return_value="テストの割り込み発言です")
 
     dummy_audio_data = b"\x00" * 1024
+    session_id = "test_session_123"
 
-    await pipeline._on_speech_detected(dummy_audio_data)
+    # 1. まず声が検知された瞬間の挙動を確認
+    await pipeline._on_voiced(session_id)
 
     # say_task.cancel() が呼ばれたか確認
     mock_say_task.cancel.assert_called_once()
+    # セッションデータに保存されているか確認
+    assert pipeline.vad.get_session_data(session_id, "interrupted_action") == "say"
+
+    # 2. 次に発話が完了した際の挙動を確認
+    await pipeline._on_speech_detected(dummy_audio_data, session_id=session_id)
 
     # キューに正しくイベントが入ったか確認
     event: QueueEvent = await ctx.priority_queue.get()
     assert event.priority == PRIORITY_VOICE
-    assert event.text == "テストの割り込み発言です"
+    assert event.text.endswith(
+        "テストの割り込み発言です"
+    )  # タイムスタンプが含まれるため endswith で判定
     assert event.interrupted_action == "say"

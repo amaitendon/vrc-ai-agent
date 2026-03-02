@@ -7,6 +7,7 @@ inputs/audio.py
 
 import asyncio
 import os
+import uuid
 from datetime import datetime
 from loguru import logger
 
@@ -62,6 +63,7 @@ class AudioInputPipeline:
 
         # 発話検知時のフックを登録 (メソッド呼び出しで登録)
         self.vad.on_speech_detected(self._on_speech_detected)
+        self.vad.on_voiced(self._on_voiced)
 
         # 話者識別ゲートのセットアップ
         self.speaker_registry = None
@@ -87,6 +89,21 @@ class AudioInputPipeline:
             return torch.cuda.is_available()
         except ImportError:
             return False
+
+    async def _on_voiced(self, session_id: str):
+        """
+        VADが声の第一声を検知した瞬間に呼ばれるコールバック。
+        再生中のタスクがあれば即座にキャンセルする。
+        """
+        if self.ctx.say_task and not self.ctx.say_task.done():
+            logger.info(
+                f"[AudioInputPipeline] Cancelling say_task due to immediate voice detection (session: {session_id})"
+            )
+            self.ctx.say_task.cancel()
+            # 中断した情報をセッションデータに保存（発話完了時に利用）
+            self.vad.set_session_data(
+                session_id, "interrupted_action", "say", create_session=True
+            )
 
     async def _on_speech_detected(
         self,
@@ -153,15 +170,13 @@ class AudioInputPipeline:
 
             logger.info(f"[AudioInputPipeline] Transcription result: {text}")
 
-            interrupted_action = None
-
-            # sayが再生中なら停止（割り込み処理）
-            if self.ctx.say_task and not self.ctx.say_task.done():
-                logger.info(
-                    "[AudioInputPipeline] Cancelling say_task due to voice interrupt by VAD"
-                )
-                self.ctx.say_task.cancel()
-                interrupted_action = "say"
+            # 中断情報の取得（_on_voicedが実行されていれば値が入っている）
+            interrupted_action = self.vad.get_session_data(
+                session_id, "interrupted_action"
+            )
+            if interrupted_action:
+                # 取得後にクリアして次回の発話に持ち越さないようにする
+                self.vad.set_session_data(session_id, "interrupted_action", None)
 
             # キューに積む
             event = QueueEvent(
@@ -202,10 +217,12 @@ class AudioInputPipeline:
                 sample_rate=self.vad.sample_rate, device_index=resolved_device_index
             )
 
-            # セッションIDを適当に発行（ユーザーの発話単位）
-            session_id = "default_session"
+            # セッションIDをUUIDで発行（ユーザーの発話単位）
+            session_id = str(uuid.uuid4())
 
-            logger.info("[AudioInputPipeline] Recording stream opening...")
+            logger.info(
+                f"[AudioInputPipeline] Recording stream opening (session: {session_id})..."
+            )
             stream = recorder.start_stream()
 
             # VAD にストリームを流し込む
