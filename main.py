@@ -78,26 +78,26 @@ async def queue_loop(ctx: AppContext) -> None:
         # トークン（メッセージ数）の上限管理
         # trim_messagesを用いて、設定されたトークン数に収まるように履歴リストを切り詰める
         try:
-            max_tokens = int(os.environ.get("MAX_HISTORY_TOKENS", 4000))
+            max_history = int(os.environ.get("MAX_HISTORY", 40))
 
             # ローカル計算を用いたトークン数計算
-            pre_tokens = count_tokens_locally(persistent_state["messages"])
+            pre_tokens = len(persistent_state["messages"])
             logger.debug(
                 f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}"
             )
 
             trimmed_messages = trim_messages(
                 persistent_state["messages"],
-                max_tokens=max_tokens,
+                max_tokens=max_history,
                 strategy="last",
-                token_counter=count_tokens_locally,
+                token_counter=len, # count_tokens_locally,：msg.contentがリストや辞書である場合、LocalTokenizerが処理可能な形式に変換が必要
                 include_system=False,  # ここにはSystemMessageは含まれていない
                 allow_partial=False,
             )
             persistent_state["messages"] = trimmed_messages
 
             # トリム後のトークン数をログ出力
-            post_tokens = count_tokens_locally(persistent_state["messages"])
+            post_tokens = len(persistent_state["messages"])
             logger.debug(
                 f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}"
             )
