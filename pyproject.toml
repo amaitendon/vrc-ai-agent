@@ -23,6 +23,8 @@ dependencies = [
     "python-osc>=1.9.3",
     "SpoutGL",
     "pillow",
+    "google-genai>=1.65.0",
+    "sentencepiece>=0.2.1",
 ]
 
 [dependency-groups]
