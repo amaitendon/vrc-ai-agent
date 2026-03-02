@@ -53,9 +53,9 @@ class AudioInputPipeline:
         )
 
         # STTのセットアップ (Faster-Whisper)
-        # TODO: モデルサイズ等は必要に応じて.env化する
+        stt_model_size = os.getenv("STT_MODEL_SIZE", "base")
         self.stt = FasterWhisperSpeechRecognizer(
-            model_size="base",
+            model_size=stt_model_size,
             device="cuda" if self._has_cuda() else "cpu",  # 可能な限りGPUを使用
             language="ja",
         )
