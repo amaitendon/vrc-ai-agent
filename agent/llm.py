@@ -1,3 +1,10 @@
+"""
+agent/llm.py
+
+LiteLLM経由でLLMを取得するラッパー。
+環境変数 LITELLM_MODEL を変更するだけでモデルを切り替えられる。
+"""
+
 from __future__ import annotations
 
 import os
