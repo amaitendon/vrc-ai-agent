@@ -56,7 +56,7 @@ class AudioInputPipeline:
         stt_model_size = os.getenv("STT_MODEL_SIZE", "base")
         self.stt = FasterWhisperSpeechRecognizer(
             model_size=stt_model_size,
-            device="cuda" if self._has_cuda() else "cpu",  # 可能な限りGPUを使用
+            device="cuda",
             language="ja",
         )
 
