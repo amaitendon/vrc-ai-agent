@@ -11,7 +11,7 @@ import asyncio
 
 from datetime import datetime
 
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from loguru import logger
@@ -22,6 +22,22 @@ from agent.nodes.think import think
 from agent.state import AgentState
 
 _tool_node = ToolNode(TOOLS)
+
+# ── リトライ設定 ──────────────────────────────────────────────────────────────
+
+MAX_TOOL_RETRY = 1
+
+TOOL_CALL_REQUIRED_MESSAGE = (
+    "ERROR: Your previous response was rejected. "
+    "You MUST respond by calling a tool. "
+    "Plain text responses and code blocks (e.g. tool_code) are not allowed. "
+    "Use the structured tool-calling interface provided by the API."
+)
+
+
+async def inject_tool_error(state: AgentState):
+    """ツール呼び出し失敗時のエラーメッセージを注入するノード"""
+    return {"messages": [SystemMessage(content=TOOL_CALL_REQUIRED_MESSAGE)]}
 
 
 async def tool_node_with_timestamp(state):
@@ -36,7 +52,8 @@ async def tool_node_with_timestamp(state):
         if isinstance(
             msg.content, str
         ):  # 文字列のときのみ追加（画像などlistの場合はスキップ）
-            msg.content = f"[{now}] {msg.content}"
+            # 直接書き換えを避け、model_copyを使用
+            msg = msg.model_copy(update={"content": f"[{now}] {msg.content}"})
         logger.bind(chat=True).info(msg.model_dump_json())
         timestamped.append(msg)
     return {"messages": timestamped}
@@ -49,8 +66,7 @@ def route_after_think(state: AgentState) -> str:
     """
     thinkノードの後の分岐。
     - ツール呼び出しあり → "tools"
-    - end_actionが含まれる → END
-    - ツール呼び出しなし（フォールバック） → END
+    - ツール呼び出しなし → リトライ or END
     """
     last_message = state["messages"][-1]
 
@@ -59,8 +75,22 @@ def route_after_think(state: AgentState) -> str:
         return END
 
     if not last_message.tool_calls:
-        # ツールを呼ばずにテキストだけ返した場合はENDへ（フォールバック）
-        logger.debug("[route] no tool calls → END")
+        # ツールを呼ばずにテキストだけ返した場合はリトライ判定へ
+        # 直近のHumanMessage以降のSystemMessage(リトライ用)の数を数える
+        retry_count = 0
+        for m in reversed(state["messages"]):
+            if isinstance(m, HumanMessage):
+                break
+            if isinstance(m, SystemMessage) and "was rejected" in m.content:
+                retry_count += 1
+
+        if retry_count < MAX_TOOL_RETRY:
+            logger.warning(
+                f"[route] no tool calls → injecting error and retrying (retry_count={retry_count})"
+            )
+            return "inject_tool_error"
+
+        logger.debug(f"[route] no tool calls and retry exhausted ({retry_count}) → END")
         return END
 
     # end_actionを含む場合もToolNodeへ通す（実行結果を会話履歴に残すため）
@@ -83,7 +113,7 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
 
     def route_after_tools(state: AgentState) -> str:
         """
-        ToolNodeの後の分岐。
+        ToolNodeের後の分岐。
         - end_actionの実行結果が含まれる → END
         - 高優先度キューにイベントあり → END（main_loopに処理を戻す）
         - それ以外 → inject_contextへループ
@@ -112,12 +142,15 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
     builder.add_node("inject_context", inject_context)
     builder.add_node("think", think)
     builder.add_node("tools", tool_node_with_timestamp)
+    builder.add_node("inject_tool_error", inject_tool_error)
 
     # エントリーポイント
     builder.set_entry_point("inject_context")
 
     # エッジ定義
     builder.add_edge("inject_context", "think")
+    # リトライ時はコンテキスト（時刻等）を最新にするため inject_context へ戻す
+    builder.add_edge("inject_tool_error", "inject_context")
     builder.add_conditional_edges("think", route_after_think)
     builder.add_conditional_edges("tools", route_after_tools)
 
