@@ -130,7 +130,6 @@ async def queue_loop(ctx: AppContext) -> None:
             is_transient = (
                 isinstance(e, (asyncio.TimeoutError, TimeoutError))
                 or "timeout" in err_str
-                or "connection" in err_str
             )
 
             if is_transient:
