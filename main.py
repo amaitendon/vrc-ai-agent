@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+import os
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from loguru import logger
 
 from agent.graph import build_graph
@@ -37,6 +38,92 @@ async def audio_listener(ctx: AppContext) -> None:
         await setup_audio_listener(ctx)
     except Exception as e:
         logger.error(f"[audio_listener] fatal error: {e}", exc_info=True)
+
+
+# ── trim_history ─────────────────────────────────────────────────────────────
+
+
+def _strip_images(messages: list) -> list:
+    """
+    古いメッセージ（末尾のmax_keep件を除く先頭側）から画像データを除去する。
+    メッセージ自体は残し、content リスト内の image_url エントリだけ削除する。
+    テキストが残らなくなる場合は "[image removed]" を代わりに入れる。
+    """
+    result = []
+    for msg in messages:
+        if isinstance(msg.content, list):
+            text_parts = [p for p in msg.content if p.get("type") != "image_url"]
+            if not text_parts:
+                text_parts = [{"type": "text", "text": "[image removed]"}]
+            msg = msg.model_copy(update={"content": text_parts})
+        result.append(msg)
+    return result
+
+
+def _split_into_blocks(messages: list) -> list[list]:
+    """
+    メッセージリストをブロック単位に分割する。
+
+    ブロック定義:
+      - HumanMessage                         → 単独1件のブロック
+      - AIMessage (tool_calls なし)          → 単独1件のブロック
+      - AIMessage (tool_calls あり)
+          + それに対応する ToolMessage 群    → まとめて1ブロック
+
+    ToolCall/ToolMessage ペアを分断しないことで LiteLLM の
+    "Missing corresponding tool call" エラーを防ぐ。
+    """
+    blocks = []
+    i = 0
+    while i < len(messages):
+        msg = messages[i]
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            # tool_call_id の集合を取得
+            expected_ids = {tc["id"] for tc in msg.tool_calls}
+            block = [msg]
+            i += 1
+            # 対応する ToolMessage をすべて回収
+            while i < len(messages) and expected_ids:
+                next_msg = messages[i]
+                if hasattr(next_msg, "tool_call_id") and next_msg.tool_call_id in expected_ids:
+                    block.append(next_msg)
+                    expected_ids.discard(next_msg.tool_call_id)
+                    i += 1
+                else:
+                    break
+            blocks.append(block)
+        else:
+            blocks.append([msg])
+            i += 1
+    return blocks
+
+
+def trim_history(messages: list, max_messages: int) -> list:
+    """
+    会話履歴を max_messages 件以内に収める。
+
+    Phase 1: 画像除去
+      先頭ブロックから順に画像を除去してメッセージ数を変えずに軽量化を試みる。
+      （現状は全メッセージの画像を除去する簡易実装）
+
+    Phase 2: ブロック単位でのメッセージ削除
+      先頭ブロックから削除して max_messages 以内に収める。
+      ToolCall + ToolMessage のペアは必ず一緒に削除する。
+    """
+    if len(messages) <= max_messages:
+        return messages
+
+    # Phase 1: 画像除去
+    messages = _strip_images(messages)
+    if len(messages) <= max_messages:
+        return messages
+
+    # Phase 2: 先頭ブロックから削除
+    blocks = _split_into_blocks(messages)
+    while blocks and sum(len(b) for b in blocks) > max_messages:
+        blocks.pop(0)
+
+    return [msg for block in blocks for msg in block]
 
 
 # ── queue_loop ────────────────────────────────────────────────────────────────
@@ -73,36 +160,15 @@ async def queue_loop(ctx: AppContext) -> None:
         # 割り込み考慮後メッセージを追加
         persistent_state["messages"].append(user_message)
 
-        # ※ツール呼び出しと実行結果のペアを分断するとエラーで落ちる。ブロック単位でメッセージ履歴を切り詰める処理が必要
-        # トークン（メッセージ数）の上限管理
-        # trim_messagesを用いて、設定されたトークン数に収まるように履歴リストを切り詰める
-        # try:
-        #     max_history = int(os.environ.get("MAX_HISTORY", 40))
-
-        #     # ローカル計算を用いたトークン数計算
-        #     pre_tokens = len(persistent_state["messages"])
-        #     logger.debug(
-        #         f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}"
-        #     )
-
-        #     trimmed_messages = trim_messages(
-        #         persistent_state["messages"],
-        #         max_tokens=max_history,
-        #         strategy="last",
-        #         token_counter=len,  # count_tokens_locally,：msg.contentがリストや辞書である場合、LocalTokenizerが処理可能な形式に変換が必要
-        #         include_system=False,  # ここにはSystemMessageは含まれていない
-        #         allow_partial=False,
-        #     )
-        #     persistent_state["messages"] = trimmed_messages
-
-        #     # トリム後のトークン数をログ出力
-        #     post_tokens = len(persistent_state["messages"])
-        #     logger.debug(
-        #         f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}"
-        #     )
-
-        # except Exception as e:
-        #     logger.warning(f"[queue_loop] trim_messages error: {e}")
+        # メッセージ履歴のトリム（ブロック単位 + 画像優先削除）
+        max_history = int(os.environ.get("MAX_HISTORY", "30"))
+        pre_count = len(persistent_state["messages"])
+        persistent_state["messages"] = trim_history(
+            persistent_state["messages"], max_messages=max_history
+        )
+        post_count = len(persistent_state["messages"])
+        if pre_count != post_count:
+            logger.debug(f"[queue_loop] trim_history: {pre_count} → {post_count} messages")
 
         # 1サイクル分のステートを組み立て
         invoke_state: AgentState = {
