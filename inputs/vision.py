@@ -142,9 +142,12 @@ def process_image_for_llm(image: Image.Image, max_width: int = 800) -> str:
 @tool
 def get_current_view() -> list[dict]:
     """
-    Captures the current visual frame from VRChat (or configured Spout sender)
-    and returns it as an image for visual analysis.
-    Use this when you need to see what is currently happening in the VR environment.
+    Capture the current visual frame from VRChat and return it as an image.
+
+    When to use:
+    - Check surroundings (who is nearby, what objects are around)
+    - Verify position before and after moving
+    - When spoken to, confirm where the other person is
     """
     sender_name = os.environ.get("SPOUT_SENDER_NAME", "VRCSender1")
     logger.debug(

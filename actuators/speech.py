@@ -88,8 +88,8 @@ async def _wait_for_playback(duration_sec: float, player: AudioPlayer) -> None:
 @tool
 async def say(text: str) -> str:
     """
-    テキストを音声合成し、ユーザーに対して発話する。
-    このツールは直ちに終了し、再生はバックグラウンドで行われる。
+    Speak the given text aloud to nearby users via voice synthesis.
+    Returns immediately; playback runs in the background.
     """
     pipeline = get_audio_output_pipeline()
 
@@ -126,4 +126,4 @@ async def say(text: str) -> str:
         _wait_for_playback(duration_sec, pipeline.player)
     )
 
-    return "say_started. 今あなたが話しているのをユーザーは聞いているため、次の思考ではsayツールは使用しないでください"
+    return "say_started. Speech is now playing in the background. Avoid calling say on your very next turn to prevent overlap."

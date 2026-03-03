@@ -2,7 +2,7 @@
 .env
 .venv/
 data
-prompts
+prompts/charactor.txt
 
 # Python
 __pycache__/

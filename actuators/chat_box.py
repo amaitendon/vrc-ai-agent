@@ -14,8 +14,8 @@ from core.osc_client import OSCClient
 @tool
 async def chat_box(message: str) -> str:
     """
-    VRChatのチャットボックスに指定したメッセージを送信する。
-    メッセージは144文字以内を推奨。絵文字・日本語も送信可能。
+    Send a message to the VRChat chat box (visible to nearby users as on-screen text).
+    Keep messages within 144 characters. Supports emojis and Japanese text.
     """
     try:
         logger.debug(f"[chat_box] Sending message via OSC: '{message}'")
@@ -24,7 +24,7 @@ async def chat_box(message: str) -> str:
         client.send_message("/chatbox/input", [message, True, True])
 
         logger.info(f"[chat_box] Message sent successfully: {message}")
-        return f"Message sent to chat box: {message}"
+        return "Message sent."
 
     except Exception as e:
         logger.exception(f"[chat_box] Error sending message via OSC: {e}")

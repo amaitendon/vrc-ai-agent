@@ -2,7 +2,7 @@ from langchain_core.tools import tool
 
 from actuators.speech import say
 from actuators.chat_box import chat_box
-from actuators.movement import move, look_direction, jump
+from actuators.movement import move, rotate, jump
 from inputs.vision import get_current_view
 # from memory.long_term import save_memory
 
@@ -10,8 +10,8 @@ from inputs.vision import get_current_view
 @tool
 def end_action() -> str:
     """
-    現在の行動サイクルを終了する。
-    ユーザーからの応答を待つ、またはこれ以上行動が不要と判断したときに呼ぶ。
+    End the current action cycle.
+    Call this when you are waiting for a user response, or when no further actions are needed.
     """
     return "action_ended"
 
@@ -23,7 +23,7 @@ TOOLS = [
     say,
     chat_box,
     move,
-    look_direction,
+    rotate,
     jump,
     get_current_view,
     # save_memory,

@@ -15,11 +15,11 @@ from core.osc_client import OSCClient
 @tool
 async def move(direction: str, duration: float = 1.0) -> str:
     """
-    指定した方向にアバターを移動させる。
+    Move in the specified direction for a given duration.
 
     Args:
-        direction (str): 'forward', 'backward', 'left', 'right' のいずれか
-        duration (float): 移動する秒数（デフォルト: 1.0）
+        direction (str): One of 'forward', 'backward', 'left', 'right'.
+        duration (float): Duration in seconds. Approximately 1-2m per second on flat ground.
     """
     valid_directions = {
         "forward": "/input/MoveForward",
@@ -43,7 +43,7 @@ async def move(direction: str, duration: float = 1.0) -> str:
 
         await asyncio.sleep(duration)
 
-        return f"Successfully moved {direction} for {duration} seconds."
+        return f"Input held: {direction} for {duration}s. Actual displacement is unknown — use get_current_view to verify."
     except Exception as e:
         logger.exception(f"[move] Error during movement: {e}")
         return f"Error occurred while moving {direction}: {e}"
@@ -57,13 +57,13 @@ async def move(direction: str, duration: float = 1.0) -> str:
 
 
 @tool
-async def look_direction(direction: str, duration: float = 0.5) -> str:
+async def rotate(direction: str, duration: float = 0.5) -> str:
     """
-    指定した方向にアバターの視点を向ける。
+    Rotate my body in the specified horizontal direction.
 
     Args:
-        direction (str): 'left', 'right' のいずれか
-        duration (float): 視点を動かす秒数。0.5[s]で約90度回転
+        direction (str): One of 'left', 'right'.
+        duration (float): Rotation duration in seconds. Rotates about 18 degrees per 0.1s.
     """
     valid_directions = {
         "left": "/input/LookLeft",
@@ -71,7 +71,7 @@ async def look_direction(direction: str, duration: float = 0.5) -> str:
     }
 
     if direction not in valid_directions:
-        return f"Error: Invalid look direction '{direction}'. Must be one of {list(valid_directions.keys())}."
+        return f"Error: Invalid rotation direction '{direction}'. Must be one of {list(valid_directions.keys())}."
 
     if duration <= 0:
         return f"Error: duration must be positive, got {duration}."
@@ -80,28 +80,28 @@ async def look_direction(direction: str, duration: float = 0.5) -> str:
     client = OSCClient.get()
 
     try:
-        logger.info(f"[look_direction] Looking {direction} for {duration} seconds")
+        logger.info(f"[rotate] Rotating {direction} for {duration} seconds")
         client.send_message(osc_address, 1)
 
         await asyncio.sleep(duration)
 
-        return f"Successfully looked {direction} for {duration} seconds."
+        return f"Input held: rotate {direction} for {duration}s. Actual rotation is unknown — use get_current_view to verify."
     except Exception as e:
-        logger.exception(f"[look_direction] Error looking {direction}: {e}")
-        return f"Error occurred while looking {direction}: {e}"
+        logger.exception(f"[rotate] Error rotating {direction}: {e}")
+        return f"Error occurred while rotating {direction}: {e}"
     finally:
         # 必ずリリースする
         try:
             client.send_message(osc_address, 0)
         except Exception:
-            logger.warning(f"[look_direction] Failed to release input for {direction}")
-        logger.debug(f"[look_direction] Released input for {direction}")
+            logger.warning(f"[rotate] Failed to release input for {direction}")
+        logger.debug(f"[rotate] Released input for {direction}")
 
 
 @tool
 async def jump() -> str:
     """
-    アバターをジャンプさせる。
+    Jump.
     """
     osc_address = "/input/Jump"
     client = OSCClient.get()
@@ -113,7 +113,7 @@ async def jump() -> str:
         # ボタンを押して離すまでの短いディレイ
         await asyncio.sleep(0.1)
 
-        return "Successfully jumped."
+        return "jumped."
     except Exception as e:
         logger.exception(f"[jump] Error during jump: {e}")
         return f"Error occurred while jumping: {e}"
