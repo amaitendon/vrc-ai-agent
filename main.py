@@ -66,7 +66,7 @@ async def queue_loop(ctx: AppContext) -> None:
 
         # interrupted_action があれば会話履歴に付与
         if event.interrupted_action:
-            prefix = f"（{event.interrupted_action}の再生中に割り込みがありました）"
+            prefix = f"([Auto System Message] User spoke over the `{event.interrupted_action}` playback.)"
             user_message = HumanMessage(content=f"{prefix}{event.text}")
         else:
             user_message = HumanMessage(content=event.text)
@@ -74,35 +74,36 @@ async def queue_loop(ctx: AppContext) -> None:
         # 割り込み考慮後メッセージを追加
         persistent_state["messages"].append(user_message)
 
+        # ※ツール呼び出しと実行結果のペアを分断するとエラーで落ちる。ブロック単位でメッセージ履歴を切り詰める処理が必要
         # トークン（メッセージ数）の上限管理
         # trim_messagesを用いて、設定されたトークン数に収まるように履歴リストを切り詰める
-        try:
-            max_history = int(os.environ.get("MAX_HISTORY", 40))
+        # try:
+        #     max_history = int(os.environ.get("MAX_HISTORY", 40))
 
-            # ローカル計算を用いたトークン数計算
-            pre_tokens = len(persistent_state["messages"])
-            logger.debug(
-                f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}"
-            )
+        #     # ローカル計算を用いたトークン数計算
+        #     pre_tokens = len(persistent_state["messages"])
+        #     logger.debug(
+        #         f"[queue_loop] messages before trim: {len(persistent_state['messages'])}, tokens: {pre_tokens}"
+        #     )
 
-            trimmed_messages = trim_messages(
-                persistent_state["messages"],
-                max_tokens=max_history,
-                strategy="last",
-                token_counter=len,  # count_tokens_locally,：msg.contentがリストや辞書である場合、LocalTokenizerが処理可能な形式に変換が必要
-                include_system=False,  # ここにはSystemMessageは含まれていない
-                allow_partial=False,
-            )
-            persistent_state["messages"] = trimmed_messages
+        #     trimmed_messages = trim_messages(
+        #         persistent_state["messages"],
+        #         max_tokens=max_history,
+        #         strategy="last",
+        #         token_counter=len,  # count_tokens_locally,：msg.contentがリストや辞書である場合、LocalTokenizerが処理可能な形式に変換が必要
+        #         include_system=False,  # ここにはSystemMessageは含まれていない
+        #         allow_partial=False,
+        #     )
+        #     persistent_state["messages"] = trimmed_messages
 
-            # トリム後のトークン数をログ出力
-            post_tokens = len(persistent_state["messages"])
-            logger.debug(
-                f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}"
-            )
+        #     # トリム後のトークン数をログ出力
+        #     post_tokens = len(persistent_state["messages"])
+        #     logger.debug(
+        #         f"[queue_loop] messages after trim: {len(persistent_state['messages'])}, tokens: {post_tokens}"
+        #     )
 
-        except Exception as e:
-            logger.warning(f"[queue_loop] trim_messages error: {e}")
+        # except Exception as e:
+        #     logger.warning(f"[queue_loop] trim_messages error: {e}")
 
         # 1サイクル分のステートを組み立て
         invoke_state: AgentState = {
