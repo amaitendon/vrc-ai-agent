@@ -13,9 +13,8 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-import os
 
-from langchain_core.messages import HumanMessage, trim_messages
+from langchain_core.messages import HumanMessage
 from loguru import logger
 
 from agent.graph import build_graph
@@ -213,7 +212,7 @@ if __name__ == "__main__":
     log_filename = datetime.now().strftime("%Y-%m-%d-%H%M.log")
     logger.add(
         log_dir / log_filename,
-        # filter=lambda record: "chat" not in record["extra"],
+        filter=lambda record: "chat" not in record["extra"],
         enqueue=True,
     )
 
