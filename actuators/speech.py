@@ -126,4 +126,4 @@ async def say(text: str) -> str:
         _wait_for_playback(duration_sec, pipeline.player)
     )
 
-    return "say_started"
+    return "say_started. 今あなたが話しているのをユーザーは聞いているため、次の思考ではsayツールは使用しないでください"
