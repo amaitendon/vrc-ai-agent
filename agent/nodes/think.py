@@ -33,7 +33,7 @@ async def think(state: AgentState) -> dict:
         last_msg = messages[-1]
         logger.bind(chat=True).info(last_msg.model_dump_json())
 
-    timeout = float(os.getenv("LLM_TIMEOUT", "60.0"))
+    timeout = float(os.getenv("LLM_TIMEOUT", "30.0"))
     try:
         response: AIMessage = await asyncio.wait_for(
             llm.ainvoke([system_msg] + messages), timeout=timeout
