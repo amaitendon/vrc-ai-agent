@@ -20,7 +20,6 @@ from loguru import logger
 
 from agent.graph import build_graph
 from agent.state import AgentState
-from agent.llm import get_llm, count_tokens_locally
 from inputs.audio import setup_audio_listener
 from core.context import AppContext, QueueEvent
 
@@ -90,7 +89,7 @@ async def queue_loop(ctx: AppContext) -> None:
                 persistent_state["messages"],
                 max_tokens=max_history,
                 strategy="last",
-                token_counter=len, # count_tokens_locally,：msg.contentがリストや辞書である場合、LocalTokenizerが処理可能な形式に変換が必要
+                token_counter=len,  # count_tokens_locally,：msg.contentがリストや辞書である場合、LocalTokenizerが処理可能な形式に変換が必要
                 include_system=False,  # ここにはSystemMessageは含まれていない
                 allow_partial=False,
             )
@@ -125,6 +124,61 @@ async def queue_loop(ctx: AppContext) -> None:
 
         except Exception as e:
             logger.error(f"[queue_loop] graph invocation error: {e}")
+
+            # タイムアウトや一時的なネットワークエラーの場合のみリカバリ（再試行）を行う
+            err_str = str(e).lower()
+            is_transient = (
+                isinstance(e, (asyncio.TimeoutError, TimeoutError))
+                or "timeout" in err_str
+                or "connection" in err_str
+            )
+
+            if is_transient:
+                # キューに溜まった残りのイベントをすべてドレインしてメッセージ履歴へ追加
+                retry_needed = False
+                while not ctx.priority_queue.empty():
+                    try:
+                        extra_event = ctx.priority_queue.get_nowait()
+
+                        if extra_event.interrupted_action:
+                            prefix = f"（{extra_event.interrupted_action}の再生中に割り込みがありました）"
+                            extra_msg = HumanMessage(
+                                content=f"{prefix}{extra_event.text}"
+                            )
+                        else:
+                            extra_msg = HumanMessage(content=extra_event.text)
+
+                        persistent_state["messages"].append(extra_msg)
+                        ctx.priority_queue.task_done()
+                        retry_needed = True
+                    except asyncio.QueueEmpty:
+                        break
+
+                if retry_needed:
+                    logger.info(
+                        "[queue_loop] Retrying graph invocation with drained events after error."
+                    )
+                    try:
+                        # まとめてAIを再呼び出し
+                        retry_state: AgentState = {
+                            **persistent_state,
+                            "current_time": datetime.now(),
+                            "current_date": datetime.now().strftime("%Y-%m-%d (%a)"),
+                            "osc_status": ctx.osc_status,
+                        }
+                        result = await graph.ainvoke(retry_state)
+                        persistent_state["messages"] = result["messages"]
+                        persistent_state["tool_call_history"] = result.get(
+                            "tool_call_history", []
+                        )
+                        persistent_state["last_spoke_at"] = result.get("last_spoke_at")
+                        persistent_state["last_memory_saved_at"] = result.get(
+                            "last_memory_saved_at"
+                        )
+                    except Exception as e2:
+                        logger.error(
+                            f"[queue_loop] retry after timeout also failed: {e2}"
+                        )
 
         finally:
             ctx.priority_queue.task_done()

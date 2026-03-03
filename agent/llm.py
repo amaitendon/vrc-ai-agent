@@ -29,12 +29,16 @@ def get_llm() -> ChatLiteLLM:
     """
     global _llm_instance, _current_model
     model = os.environ.get("LITELLM_MODEL", "gemini/gemini-2.0-flash")
+    timeout = float(os.environ.get("LLM_TIMEOUT", "60.0"))
 
     if _llm_instance is None or _current_model != model:
-        logger.debug(f"[llm] initializing new ChatLiteLLM instance: {model}")
+        logger.debug(
+            f"[llm] initializing new ChatLiteLLM instance: {model}, timeout={timeout}"
+        )
         _llm_instance = ChatLiteLLM(
             model=model,
             temperature=0.7,
+            timeout=timeout,
         )
         _current_model = model
 

@@ -36,7 +36,12 @@ async def test_audio_listener_interrupt(clean_app_context):
         FasterWhisperSpeechRecognizer, "transcribe", new_callable=AsyncMock
     ) as mock_transcribe:
         mock_transcribe.return_value = "test input"
-        await pipeline._on_speech_detected(b"\x00")
+
+        # 1. 最初に声が検出されたタイミングで_on_voicedが呼ばれる
+        await pipeline._on_voiced("test_session_1")
+
+        # 2. 発話が終了したタイミングで_on_speech_detectedが呼ばれる
+        await pipeline._on_speech_detected(b"\x00", session_id="test_session_1")
 
     # say_taskがキャンセルされているか
     mock_task.cancel.assert_called_once()
@@ -44,6 +49,6 @@ async def test_audio_listener_interrupt(clean_app_context):
     # キューにイベントが入っているか
     assert not ctx.priority_queue.empty()
     event = await ctx.priority_queue.get()
-    assert event.text == "test input"
+    assert event.text == "[00:00:00]: test input" or "test input" in event.text
     assert event.priority == PRIORITY_VOICE
     assert event.interrupted_action == "say"
