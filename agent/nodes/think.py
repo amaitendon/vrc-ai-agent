@@ -14,9 +14,7 @@ async def think(state: AgentState) -> dict:
     ツールを呼ぶか / end_actionを呼ぶか / （将来）ハートビートに応じた行動を決める。
     思考内容の素テキストはVRCへ渡さない（ToolNode経由でのみ外部に出る）。
     """
-    from langchain_core.messages import HumanMessage  # noqa: PLC0415
     from agent.llm import get_llm  # 循環import回避のためここで import # noqa: PLC0415
-    from core.context import AppContext  # noqa: PLC0415
 
     llm = get_llm().bind_tools(TOOLS)
 
@@ -25,7 +23,6 @@ async def think(state: AgentState) -> dict:
     # trim_messagesはPhase1（STEP3）で実装後、ここで適用する
     # messages = trim_messages(state["messages"], ...)
     messages = state["messages"]
-
 
     logger.debug(f"[think] invoking LLM, message_count={len(messages)}")
 

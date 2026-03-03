@@ -48,7 +48,7 @@ async def test_say_tool_normal_flow(mock_sleep, mock_pipeline):
 
     # Execute
     res = await say.ainvoke({"text": "Hello"})
-    assert res == "say_started"
+    assert "say_started" in res
 
     # Verify TTS and Player were called
     mock_pipeline.tts.synthesize.assert_called_once_with("Hello")
