@@ -1,3 +1,5 @@
+import asyncio
+import os
 from datetime import datetime
 
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
@@ -31,7 +33,14 @@ async def think(state: AgentState) -> dict:
         last_msg = messages[-1]
         logger.bind(chat=True).info(last_msg.model_dump_json())
 
-    response: AIMessage = await llm.ainvoke([system_msg] + messages)
+    timeout = float(os.getenv("LLM_TIMEOUT", "60.0"))
+    try:
+        response: AIMessage = await asyncio.wait_for(
+            llm.ainvoke([system_msg] + messages), timeout=timeout
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"[think] LLM invocation timed out after {timeout} seconds")
+        raise
 
     # レスポンス内容(思考＋ツールコールの差分)をチャットログへ出力
     logger.bind(chat=True).info(response.model_dump_json())
