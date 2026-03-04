@@ -111,11 +111,15 @@ def capture_spout_frame(
         receiver.releaseReceiver()
 
 
-def process_image_for_llm(image: Image.Image, max_width: int = 800) -> str:
+def process_image_for_llm(image: Image.Image, max_width: int | None = None) -> str:
     """
     画像をリサイズし、JPEG形式のBase64文字列に変換する。
     LLMへの入力サイズを抑えるための処理。
     """
+    # 環境変数から設定を取得（引数が優先）
+    if max_width is None:
+        max_width = int(os.environ.get("VISION_MAX_WIDTH", "800"))
+
     # リサイズ（アスペクト比維持）
     if image.width > max_width:
         ratio = max_width / float(image.width)
@@ -127,8 +131,9 @@ def process_image_for_llm(image: Image.Image, max_width: int = 800) -> str:
         image = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
 
     # JPEG形式でメモリバッファに保存
+    quality = int(os.environ.get("VISION_JPEG_QUALITY", "85"))
     buffered = BytesIO()
-    image.save(buffered, format="JPEG", quality=85)
+    image.save(buffered, format="JPEG", quality=quality)
     jpeg_bytes = buffered.getvalue()
 
     # デバッグ用に実際にLLMに送られる画像データを保存
