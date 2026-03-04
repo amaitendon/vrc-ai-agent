@@ -25,13 +25,6 @@ async def think(state: AgentState) -> dict:
 
     base_prompt = BASE_SYSTEM_PROMPT
 
-    recall_instruction = (
-        "\n\n# When to use `recall`\n"
-        "If past context comes up that you don't remember, use the `recall` tool to check your memory before responding.\n"
-        "Triggers include: phrases like 'the other day' or 'do you remember?', references to a specific person's name, a place, or a past event."
-    )
-    base_prompt += recall_instruction
-
     day_summaries = state.get("day_summary_context", "")
     if day_summaries:
         base_prompt += f"\n\n# My Past Memories\n{day_summaries}"
