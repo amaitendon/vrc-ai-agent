@@ -5,6 +5,9 @@ Architecture inspired by memory-mcp (Phase 11: SQLite+numpy).
 - Semantic search: multilingual-e5-small (~117MB, lazy loaded)
 - Hybrid: vector similarity + LIKE keyword fallback
 - Two memory types: observations (what I saw) + feelings (what I felt)
+
+Origin: Derived from familiar-ai by Kota Mizushima (MIT License).
+See THIRD_PARTY_LICENSES.md for full license text.
 """
 
 from __future__ import annotations
