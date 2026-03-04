@@ -4,6 +4,7 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 from typing import Annotated
 from pydantic import Field
+from pathlib import Path
 
 from actuators.speech import say
 from actuators.chat_box import chat_box
@@ -40,8 +41,10 @@ def end_action(state: Annotated[dict, InjectedState]) -> str:
     prev_was_end_action = state.get("prev_was_end_action", False)
 
     max_history = int(os.getenv("MAX_HISTORY", "30"))
-    strong_nudge_threshold = max_history // 3 # 3mesg/1cyc想定でコンテキストが溢れないように保存を促す
-    weak_nudge_threshold = max_history // 4 # 安直に+1
+    strong_nudge_threshold = (
+        max_history // 3
+    )  # 3mesg/1cyc想定でコンテキストが溢れないように保存を促す
+    weak_nudge_threshold = max_history // 4  # 安直に+1
 
     if not prev_was_end_action:
         if unsaved_cycles >= strong_nudge_threshold:
@@ -61,17 +64,22 @@ async def remember(
             description='Emotional tone of this memory. One of: "neutral", "happy", "sad", "curious", "excited", "moved".'
         ),
     ] = "neutral",
-    image_path: Annotated[
+    image_filename: Annotated[
         str | None,
         Field(
-            description="Optional path to an image file to attach (e.g. from get_current_view())."
+            description="Optional filename of the image returned by get_current_view()."
         ),
     ] = None,
 ) -> str:
     """
     Save something to long-term memory. Use this to remember important things: what you saw, what happened, how you felt, conversations.
-    If you just took a photo, you can pass the image_path to attach it.
+    If you just took a photo, you can pass the image_filename to attach it.
     """
+    image_path = None
+    if image_filename:
+        log_dir = Path(os.environ.get("VISION_LOG_DIR", "logs")).absolute()
+        image_path = str(log_dir / image_filename)
+
     ok = await memory_store.save_async(
         content=content, kind="observation", emotion=emotion, image_path=image_path
     )

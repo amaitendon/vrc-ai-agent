@@ -13,7 +13,7 @@ async def test_memory_tools_exist():
 
 
 def test_end_action_nudge():
-    # Test nudge at 3 cycles
+    # Test nudge at 10 cycles (threshold depends on MAX_HISTORY, typically 10)
     state = AgentState(
         messages=[],
         current_time=datetime.now(),
@@ -22,14 +22,14 @@ def test_end_action_nudge():
         tool_call_history=[],
         last_spoke_at=None,
         last_memory_saved_at=None,
-        unsaved_cycles=3,
+        unsaved_cycles=10,
         prev_was_end_action=False,
         day_summary_context="",
     )
     result = end_action.func(state)
     assert isinstance(result, str)
     assert result.startswith("NUDGE: ")
-    assert "3 cycles have passed" in result
+    assert "10 cycles have passed" in result
 
 
 def test_end_action_no_nudge():
