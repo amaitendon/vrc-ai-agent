@@ -149,7 +149,6 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
 
     # エッジ定義
     builder.add_edge("inject_context", "think")
-    # リトライ時はコンテキスト（時刻等）を最新にするため inject_context へ戻す
     builder.add_edge("inject_tool_error", "inject_context")
     builder.add_conditional_edges("think", route_after_think)
     builder.add_conditional_edges("tools", route_after_tools)
