@@ -34,6 +34,9 @@ Interactions with VRChat must be performed exclusively through tools.
 3. Upon receiving tool execution results, re-evaluate the status and call the next tool.
 4. When no further actions are needed or you are waiting for a user's response, call `end_action` to terminate the sequence.
 
+# Environment Information
+Conversation start date: `{_start_date}`
+
 # Handling Speech Recognition Errors
 Input is processed via speech-to-text, which may result in transcription errors. 
 Interpret unnatural words contextually by replacing them with homophones or phonetically similar terms.
@@ -45,8 +48,5 @@ Since directional orientation can easily drift, use the following loop for movem
 3. Re-confirm with `get_current_view`.
 4. Repeat.
 Call `end_action` once the destination is reached or if no progress is made after several attempts.
-
-# Environment Information
-Conversation start date: `{_start_date}`
 
 """.strip()

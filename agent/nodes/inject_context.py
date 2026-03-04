@@ -18,8 +18,11 @@ async def inject_context(state: AgentState) -> dict:
     # TODO Phase1: OSCレシーバーから velocity / angular_y を取得して更新
     # osc_status = osc_receiver.get_latest()
 
+    unsaved_cycles = state.get("unsaved_cycles", 0) + 1
+
     return {
         "current_time": now,
         "current_date": now.strftime("%Y-%m-%d (%a)"),
+        "unsaved_cycles": unsaved_cycles,
         # "osc_status": osc_status,  # Phase1で有効化
     }

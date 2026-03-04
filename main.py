@@ -85,7 +85,10 @@ def _split_into_blocks(messages: list) -> list[list]:
             # 対応する ToolMessage をすべて回収
             while i < len(messages) and expected_ids:
                 next_msg = messages[i]
-                if hasattr(next_msg, "tool_call_id") and next_msg.tool_call_id in expected_ids:
+                if (
+                    hasattr(next_msg, "tool_call_id")
+                    and next_msg.tool_call_id in expected_ids
+                ):
                     block.append(next_msg)
                     expected_ids.discard(next_msg.tool_call_id)
                     i += 1
@@ -136,12 +139,24 @@ async def queue_loop(ctx: AppContext) -> None:
     graph = build_graph(priority_queue=ctx.priority_queue)
     logger.info("[queue_loop] started")
 
+    from agent.nodes.action import memory_store
+    from agent.memory_utils import backfill_day_summaries
+
+    # バックグラウンドで過去の未生成Day Summaryを作成
+    asyncio.create_task(backfill_day_summaries())
+
+    summaries = await memory_store.recall_day_summaries_async(n=5)
+    day_summary_context = memory_store.format_day_summaries_for_context(summaries)
+
     # グラフの初期ステートのベース（セッション全体で引き継ぐ情報）
     persistent_state: dict = {
         "messages": [],
         "tool_call_history": [],
         "last_spoke_at": None,
         "last_memory_saved_at": None,
+        "unsaved_cycles": 0,
+        "prev_was_end_action": False,
+        "day_summary_context": day_summary_context,
     }
 
     while True:
@@ -168,7 +183,9 @@ async def queue_loop(ctx: AppContext) -> None:
         )
         post_count = len(persistent_state["messages"])
         if pre_count != post_count:
-            logger.debug(f"[queue_loop] trim_history: {pre_count} → {post_count} messages")
+            logger.debug(
+                f"[queue_loop] trim_history: {pre_count} → {post_count} messages"
+            )
 
         # 1サイクル分のステートを組み立て
         invoke_state: AgentState = {
@@ -187,6 +204,12 @@ async def queue_loop(ctx: AppContext) -> None:
             persistent_state["last_memory_saved_at"] = result.get(
                 "last_memory_saved_at"
             )
+            persistent_state["unsaved_cycles"] = result.get(
+                "unsaved_cycles", persistent_state["unsaved_cycles"]
+            )
+            # BUG-1修正: サイクルが終了したら prev_was_end_action をリセットする
+            # こうすることで、次のサイクルの最初のend_actionで再びナッジが発火するようになる
+            persistent_state["prev_was_end_action"] = False
 
         except Exception as e:
             logger.error(f"[queue_loop] graph invocation error: {e}")
@@ -240,6 +263,11 @@ async def queue_loop(ctx: AppContext) -> None:
                         persistent_state["last_memory_saved_at"] = result.get(
                             "last_memory_saved_at"
                         )
+                        persistent_state["unsaved_cycles"] = result.get(
+                            "unsaved_cycles", persistent_state["unsaved_cycles"]
+                        )
+                        # BUG-1修正: リトライ成功後も prev_was_end_action をリセットする（正常系と同じ挙動）
+                        persistent_state["prev_was_end_action"] = False
                     except Exception as e2:
                         logger.error(
                             f"[queue_loop] retry after timeout also failed: {e2}"
