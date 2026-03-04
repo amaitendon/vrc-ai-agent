@@ -44,19 +44,35 @@ async def tool_node_with_timestamp(state):
     """
     ツール実行ノードのラッパー。
     実行結果（ToolMessage）のコンテンツの先頭に実行時刻のタイムスタンプを付与する。
+    また、記憶関連ツールからの特定の戻り値を検知してステートを更新する。
     """
     result = await _tool_node.ainvoke(state)
     now = datetime.now().strftime("%H:%M:%S")
     timestamped = []
-    for msg in result["messages"]:
-        if isinstance(
-            msg.content, str
-        ):  # 文字列のときのみ追加（画像などlistの場合はスキップ）
+
+    # マージ用のステート更新辞書
+    state_updates = {"messages": timestamped}
+
+    for msg in result.get("messages", []):
+        content = msg.content
+        if isinstance(content, str):
+            # end_actionからのステート更新のトリガーを検知
+            # "NUDGE: " プレフィックスによるシグナル確認
+            if content.startswith("NUDGE: "):
+                content = content[7:]  # "NUDGE: " を取り除く
+                state_updates["prev_was_end_action"] = True
+            elif "action_ended" in content:
+                state_updates["prev_was_end_action"] = False
+            elif content.startswith("Remembered"):
+                state_updates["unsaved_cycles"] = 0
+
             # 直接書き換えを避け、model_copyを使用
-            msg = msg.model_copy(update={"content": f"[{now}] {msg.content}"})
+            msg = msg.model_copy(update={"content": f"[{now}] {content}"})
+
         logger.bind(chat=True).info(msg.model_dump_json())
         timestamped.append(msg)
-    return {"messages": timestamped}
+
+    return state_updates
 
 
 # ── 条件分岐 ─────────────────────────────────────────────────────────────────

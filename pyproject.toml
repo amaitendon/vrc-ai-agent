@@ -25,6 +25,7 @@ dependencies = [
     "pillow",
     "google-genai>=1.65.0",
     "sentencepiece>=0.2.1",
+    "sentence-transformers>=5.2.3",
 ]
 
 [dependency-groups]

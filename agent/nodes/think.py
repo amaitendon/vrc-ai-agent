@@ -1,6 +1,7 @@
 import asyncio
 import os
 from datetime import datetime
+from pathlib import Path
 
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from loguru import logger
@@ -8,6 +9,8 @@ from loguru import logger
 from agent.nodes.action import TOOLS
 from agent.state import AgentState
 from prompts.prompts import BASE_SYSTEM_PROMPT
+
+_system_prompt_logged = False
 
 
 async def think(state: AgentState) -> dict:
@@ -20,7 +23,28 @@ async def think(state: AgentState) -> dict:
 
     llm = get_llm().bind_tools(TOOLS)
 
-    system_msg = SystemMessage(content=BASE_SYSTEM_PROMPT)
+    base_prompt = BASE_SYSTEM_PROMPT
+
+    recall_instruction = (
+        "\n\n# When to use `recall`\n"
+        "If past context comes up that you don't remember, use the `recall` tool to check your memory before responding.\n"
+        "Triggers include: phrases like 'the other day' or 'do you remember?', references to a specific person's name, a place, or a past event."
+    )
+    base_prompt += recall_instruction
+
+    day_summaries = state.get("day_summary_context", "")
+    if day_summaries:
+        base_prompt += f"\n\n# My Past Memories\n{day_summaries}"
+
+    global _system_prompt_logged
+    if not _system_prompt_logged:
+        log_path = Path("logs") / "system_prompt.txt"
+        log_path.parent.mkdir(exist_ok=True)
+        log_path.write_text(base_prompt, encoding="utf-8")
+        logger.debug(f"[think] system_prompt written to {log_path}")
+        _system_prompt_logged = True
+
+    system_msg = SystemMessage(content=base_prompt)
 
     # trim_messagesはPhase1（STEP3）で実装後、ここで適用する
     # messages = trim_messages(state["messages"], ...)

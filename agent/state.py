@@ -47,6 +47,10 @@ class AgentState(TypedDict):
     last_spoke_at: datetime | None  # 最後にTTSで発声した時刻
     last_memory_saved_at: datetime | None  # 最後に長期記憶を保存した時刻
 
+    # ── 記憶保存ナッジ用（familiar-ai） ────────────────────────────────────
+    unsaved_cycles: int
+    prev_was_end_action: bool
+    day_summary_context: str  # 起動時に取得した過去数日分の要約テキスト
     # ── Phase2: 以下は将来追加予定 ───────────────────────────────────────────
     # visual_context: str | None        # 視覚MCP（Spout）の解析結果
     # speaker_direction: float | None   # 音声L/R比較による話者方向
