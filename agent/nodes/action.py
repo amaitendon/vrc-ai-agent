@@ -40,8 +40,8 @@ def end_action(state: Annotated[dict, InjectedState]) -> str:
     prev_was_end_action = state.get("prev_was_end_action", False)
 
     max_history = int(os.getenv("MAX_HISTORY", "30"))
-    strong_nudge_threshold = max_history // 4 # 4mesg/1cyc想定でコンテキストが溢れないように保存を促す
-    weak_nudge_threshold = max_history // 5 # 安直に+1
+    strong_nudge_threshold = max_history // 3 # 3mesg/1cyc想定でコンテキストが溢れないように保存を促す
+    weak_nudge_threshold = max_history // 4 # 安直に+1
 
     if not prev_was_end_action:
         if unsaved_cycles >= strong_nudge_threshold:
