@@ -56,13 +56,13 @@ async def tool_node_with_timestamp(state):
     for msg in result.get("messages", []):
         content = msg.content
         if isinstance(content, str):
-            # end_actionからのステート更新のトリガーを検知
-            # "NUDGE: " プレフィックスによるシグナル確認
+            # end_actionツール結果の確認
             if content.startswith("NUDGE: "):
-                content = content[7:]  # "NUDGE: " を取り除く
+                content = content[7:]  # end_actionの結果確認のための文字列であり、AIには見せないため、"NUDGE: " を取り除く
                 state_updates["prev_was_end_action"] = True
             elif "action_ended" in content:
                 state_updates["prev_was_end_action"] = False
+            # Rememberツール結果の確認
             elif content.startswith("Remembered"):
                 state_updates["unsaved_cycles"] = 0
 
