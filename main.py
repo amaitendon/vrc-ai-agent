@@ -14,6 +14,8 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
 
 from langchain_core.messages import AIMessage, HumanMessage
 from loguru import logger
@@ -319,4 +321,6 @@ if __name__ == "__main__":
         enqueue=True,
     )
 
+    load_dotenv()
     asyncio.run(main())
+
