@@ -16,14 +16,12 @@ except ImportError:
     SpoutGL = None
 
 
-def _save_debug_image(image_bytes: bytes) -> str | None:
+def _save_vision_image(image_bytes: bytes) -> str | None:
     """
-    加工済みの画像（JPEGバイト列）をデバッグ用にファイルとして保存する。
+    加工済みの画像（JPEGバイト列）をファイルとして保存する。
+    LLMにはこのファイル名を伝えることで、正しいファイルを参照させる。
+    デバッグ用途も兼ねる。
     """
-    # SAVE_VISION_LOGS が 0 の場合は保存しない (デフォルトは 1: 有効)
-    if os.environ.get("SAVE_VISION_LOGS", "1") == "0":
-        return None
-
     try:
         log_dir = Path(os.environ.get("VISION_LOG_DIR", "logs"))
         log_dir.mkdir(exist_ok=True, parents=True)
@@ -34,10 +32,10 @@ def _save_debug_image(image_bytes: bytes) -> str | None:
         with open(save_path, "wb") as f:
             f.write(image_bytes)
 
-        logger.debug(f"[vision] Saved debug image to: {save_path}")
-        return str(save_path)
+        logger.debug(f"[vision] Saved image to: {save_path}")
+        return filename
     except Exception as e:
-        logger.error(f"[vision] Failed to save debug image: {e}")
+        logger.error(f"[vision] Failed to save image: {e}")
         return None
 
 
@@ -111,10 +109,13 @@ def capture_spout_frame(
         receiver.releaseReceiver()
 
 
-def process_image_for_llm(image: Image.Image, max_width: int | None = None) -> str:
+def process_image_for_llm(
+    image: Image.Image, max_width: int | None = None
+) -> tuple[str, str | None]:
     """
     画像をリサイズし、JPEG形式のBase64文字列に変換する。
     LLMへの入力サイズを抑えるための処理。
+    また、画像を保存してファイル名を返す。
     """
     # 環境変数から設定を取得（引数が優先）
     if max_width is None:
@@ -136,12 +137,12 @@ def process_image_for_llm(image: Image.Image, max_width: int | None = None) -> s
     image.save(buffered, format="JPEG", quality=quality)
     jpeg_bytes = buffered.getvalue()
 
-    # デバッグ用に実際にLLMに送られる画像データを保存
-    _save_debug_image(jpeg_bytes)
+    # 画像を保存し、ファイル名を取得
+    filename = _save_vision_image(jpeg_bytes)
 
     # Base64エンコード
     img_str = base64.b64encode(jpeg_bytes).decode("utf-8")
-    return img_str
+    return img_str, filename
 
 
 @tool
@@ -171,16 +172,21 @@ def get_current_view() -> list[dict]:
             }
         ]
 
-    base64_img = process_image_for_llm(image)
+    base64_img, filename = process_image_for_llm(image)
 
     logger.success(
         f"[vision] Successfully captured and processed view from '{sender_name}'"
     )
 
     # LiteLLM / Gemini などが解釈できる形式
-    return [
+    content = [
         {
             "type": "image_url",
             "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"},
         }
     ]
+
+    if filename:
+        content.append({"type": "text", "text": f"Image saved as: {filename}"})
+
+    return content

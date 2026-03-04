@@ -2,7 +2,6 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import END
 from agent.graph import inject_context, think, route_after_think
 
 
@@ -57,9 +56,9 @@ def test_route_after_think_tools():
 
 
 def test_route_after_think_end():
-    # ツール呼び出しがない場合
+    # ツール呼び出しがない場合（1回目の失敗）はリトライへ遷移する
     state = {"messages": [AIMessage(content="Hello")]}
-    assert route_after_think(state) == END
+    assert route_after_think(state) == "inject_tool_error"
 
 
 @pytest.mark.asyncio
