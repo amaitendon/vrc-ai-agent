@@ -297,29 +297,40 @@ if __name__ == "__main__":
     import sys
     from pathlib import Path
 
+    load_dotenv()
+
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
 
     # デフォルトの標準出力ハンドラの設定変更
     logger.remove()
-    logger.add(sys.stderr, filter=lambda record: "chat" not in record["extra"])
+
+    # stderr ハンドラ
+    if os.environ.get("LOG_STDERR_ENABLED", "1") == "1":
+        stderr_level = os.environ.get("LOG_STDERR_LEVEL", "DEBUG")
+        logger.add(
+            sys.stderr,
+            level=stderr_level,
+            filter=lambda record: "chat" not in record["extra"],
+        )
 
     # 通常のログファイルの設定 (例: 2026-02-28-1309.log)
     log_filename = datetime.now().strftime("%Y-%m-%d-%H%M.log")
-    logger.add(
-        log_dir / log_filename,
-        filter=lambda record: "chat" not in record["extra"],
-        enqueue=True,
-    )
+    if os.environ.get("LOG_FILE_ENABLED", "1") == "1":
+        logger.add(
+            log_dir / log_filename,
+            filter=lambda record: "chat" not in record["extra"],
+            enqueue=True,
+        )
 
     # チャット履歴専用ログファイルの設定 (例: 2026-02-28-1309-chat.log)
     chat_log_filename = datetime.now().strftime("%Y-%m-%d-%H%M-chat.log")
-    logger.add(
-        log_dir / chat_log_filename,
-        filter=lambda record: "chat" in record["extra"],
-        format="{message}",
-        enqueue=True,
-    )
+    if os.environ.get("LOG_CHAT_FILE_ENABLED", "1") == "1":
+        logger.add(
+            log_dir / chat_log_filename,
+            filter=lambda record: "chat" in record["extra"],
+            format="{message}",
+            enqueue=True,
+        )
 
-    load_dotenv()
     asyncio.run(main())
