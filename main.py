@@ -209,7 +209,7 @@ async def queue_loop(ctx: AppContext) -> None:
             persistent_state["unsaved_cycles"] = result.get(
                 "unsaved_cycles", persistent_state["unsaved_cycles"]
             )
-            # BUG-1修正: サイクルが終了したら prev_was_end_action をリセットする
+            # サイクルが終了したら prev_was_end_action をリセットする
             # こうすることで、次のサイクルの最初のend_actionで再びナッジが発火するようになる
             persistent_state["prev_was_end_action"] = False
 
@@ -268,7 +268,7 @@ async def queue_loop(ctx: AppContext) -> None:
                         persistent_state["unsaved_cycles"] = result.get(
                             "unsaved_cycles", persistent_state["unsaved_cycles"]
                         )
-                        # BUG-1修正: リトライ成功後も prev_was_end_action をリセットする（正常系と同じ挙動）
+                        # リトライ成功後も prev_was_end_action をリセットする（正常系と同じ挙動）
                         persistent_state["prev_was_end_action"] = False
                     except Exception as e2:
                         logger.error(
