@@ -23,6 +23,10 @@ def _save_vision_image(image_bytes: bytes) -> str | None:
     デバッグ用途も兼ねる。
     """
     try:
+        if os.environ.get("SAVE_VISION_IMAGES", "1").lower() in ("0", "false"):
+            logger.debug("[vision] Image saving is disabled by SAVE_VISION_IMAGES.")
+            return None
+
         log_dir = Path(os.environ.get("VISION_LOG_DIR", "logs"))
         log_dir.mkdir(exist_ok=True, parents=True)
 

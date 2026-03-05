@@ -1,30 +1,30 @@
 import asyncio
 from datetime import datetime
 from loguru import logger
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from agent.nodes.action import memory_store
 from agent.llm import get_llm
+from prompts.prompts import BASE_SYSTEM_PROMPT
 
-_DAY_SUMMARY_PROMPT = """\
-You are writing a diary entry about this day from your own first-person memory.
-Recall the flow of the day: what happened in the morning, then afternoon, then evening.
-Capture how your feelings changed as events unfolded — what made you happy, 
-what frustrated you, what surprised you, what lingered in your mind.
+_DAY_SUMMARY_PROMPT = """
+あなたはこの日の日記を、自分の記憶として一人称で書いています。
+印象的だった出来事と感情の変化を散文で書いてください。
 
-Rules:
-- Write in first person, as someone remembering their own lived day
-- Follow the chronological arc: morning → afternoon → evening
-- Include specific details: what you saw, who you talked to, what was said
-- Show emotional shifts: how one event changed how you felt about the next
-- Do NOT list events — weave them into a flowing narrative
-- Do NOT include titles, headers, or markdown formatting
-- Start directly with the first sentence of the entry
-- 5-8 sentences. Write in Japanese.
+【条件】
+- 200文字以内
+
+ルール：
+- 一人称で、自分が思い出すように書く
+- 箇条書き・タイトル・見出しは使わない
+- 最初の一文から直接本文を始める
+- 感情の変化を含める
+- 具体的なディテールを1つ以上入れる
 
 {observations}
 
-Write just the diary entry."""
+日記本文のみを出力してください。文字数カウントや説明は不要です。
+"""
 
 
 async def generate_day_summary(date: str) -> None:
@@ -51,7 +51,10 @@ async def generate_day_summary(date: str) -> None:
 
         llm = get_llm()
         prompt = _DAY_SUMMARY_PROMPT.format(observations=transcript)
-        messages = [HumanMessage(content=prompt)]
+        messages = [
+            SystemMessage(content=BASE_SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ]
 
         response = await asyncio.wait_for(llm.ainvoke(messages), timeout=30.0)
         summary = response.content

@@ -64,28 +64,15 @@ async def remember(
             description='Emotional tone of this memory. One of: "neutral", "happy", "sad", "curious", "excited", "moved".'
         ),
     ] = "neutral",
-    image_filename: Annotated[
-        str | None,
-        Field(
-            description="Optional filename of the image returned by get_current_view()."
-        ),
-    ] = None,
 ) -> str:
     """
     Save something to long-term memory. Use this to remember important things: what you saw, what happened, how you felt, conversations.
-    If you just took a photo, you can pass the image_filename to attach it.
     """
-    image_path = None
-    if image_filename:
-        log_dir = Path(os.environ.get("VISION_LOG_DIR", "logs")).absolute()
-        image_path = str(log_dir / image_filename)
-
     ok = await memory_store.save_async(
-        content=content, kind="observation", emotion=emotion, image_path=image_path
+        content=content, kind="observation", emotion=emotion, image_path=None
     )
     if ok:
-        suffix = " (with image)" if image_path else ""
-        return f"Remembered{suffix}: {content[:60]}"
+        return f"Remembered: {content[:60]}"
     return "Failed to save memory."
 
 
