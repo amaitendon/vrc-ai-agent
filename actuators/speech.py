@@ -91,6 +91,7 @@ async def say(text: str) -> str:
     Speak the given text aloud to nearby users via voice synthesis.
     Returns immediately; playback runs in the background.
     """
+    logger.info(f"[say] Speaking: {text}")
     pipeline = get_audio_output_pipeline()
 
     # 1. TTS合成
