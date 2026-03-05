@@ -4,7 +4,6 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 from typing import Annotated
 from pydantic import Field
-from pathlib import Path
 
 from actuators.speech import say
 from actuators.chat_box import chat_box

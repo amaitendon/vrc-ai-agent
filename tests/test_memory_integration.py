@@ -49,10 +49,14 @@ def test_end_action_no_nudge():
     result = end_action.func(state)
     assert isinstance(result, str)
     assert result == "action_ended"
+
+
 @pytest.mark.asyncio
 async def test_remember_tool_no_image():
     # content and emotion are required/optional
-    result = await remember.ainvoke({"content": "Test memory content", "emotion": "happy"})
+    result = await remember.ainvoke(
+        {"content": "Test memory content", "emotion": "happy"}
+    )
     assert "Remembered:" in result
     assert "Test memory content" in result
     # Check that image_filename is no longer in the tool's arguments schema
