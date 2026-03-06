@@ -6,7 +6,7 @@ This project includes code derived from third-party open source software.
 
 ## familiar-ai
 
-**Source**: https://github.com/susumuota/familiar-ai  
+**Source**: https://github.com/lifemate-ai/familiar-ai  
 **File(s)**: `memory/memory.py`  
 **License**: MIT License
 

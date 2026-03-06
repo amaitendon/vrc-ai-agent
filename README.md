@@ -13,8 +13,8 @@ VRChat 向けの AI エージェントです。
 | Python | 3.11（[uv](https://docs.astral.sh/uv/) で管理） |
 | VRChat | VRChat がログイン済みで起動していること |
 | VOICEVOX | [VOICEVOX](https://voicevox.hiroshiba.jp/) が起動していること（デフォルト: `http://127.0.0.1:50021`） |
-| 映像入力 | [Spout](https://spout.zeal.co/) 経由で VRChat の映像が送信されていること（Vision 機能を使う場合） |
-| 音声認識 | [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) を使用（GPU 推奨。CPU でも動作したが低速で厳しい） |
+| 映像入力 | [Spout](https://spout.zeal.co/) 経由で VRChat の映像が送信されていること |
+| 音声認識 | [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) を使用（GPU 推奨） |
 
 ---
 
@@ -92,10 +92,10 @@ OPENAI_API_KEY=your_api_key_here
 ANTHROPIC_API_KEY=your_api_key_here
 ```
 
-※LLMモデルの注意点
-`gemini-2.5-flash-lite`等の古いモデルでは、安定して動作しないことがあります。
-（内部で function calling を多用しているため、 安定的に function calling が使えるモデルである必要があります）
-動作確認では、`gemini-3.1-flash-lite-preview`を用いて 安定的に動作することを確認しています。
+※LLMモデルの注意点  
+`gemini-2.5-flash-lite`等の古いモデルでは、安定して動作しないことがあります。  
+（内部で function calling を多用しているため、 安定的に function calling が使えるモデルである必要があります）  
+動作確認では、`gemini-3.1-flash-lite-preview`を用いて 安定的に動作することを確認しています。  
 
 #### 音声ルーティング設定
 
@@ -111,17 +111,17 @@ AUDIO_OUTPUT_DEVICE_NAME=
 AUDIO_OUTPUT_DEVICE_INDEX=
 ```
 
-以下のコマンドで認識されているデバイス一覧を取得できます。
+以下のコマンドで認識されているデバイス一覧を取得できます。  
 使用するデバイスの index または name の値を設定してください。
 ```bash
 uv run ./scripts/list_devices.py
 ```
 
-※参考：作者の環境では以下の設定で運用しました。
-VRChatの出力デバイス：Voicemeeter Input (VB-Audio Voicemeeter VAIO)
-VRChatの入力デバイス：CABLE Output (VB-Audio Virtual Cable)
-AUDIO_INPUT_DEVICE_NAME="Voicemeeter Out B1"
-AUDIO_OUTPUT_DEVICE_NAME="CABLE Input"
+※参考：作者の環境では以下の設定で運用しました。  
+VRChatの出力デバイス：Voicemeeter Input (VB-Audio Voicemeeter VAIO)  
+VRChatの入力デバイス：CABLE Output (VB-Audio Virtual Cable)  
+AUDIO_INPUT_DEVICE_NAME="Voicemeeter Out B1"  
+AUDIO_OUTPUT_DEVICE_NAME="CABLE Input"  
 
 #### Spout設定の補足
 ```env
@@ -129,7 +129,7 @@ SPOUT_SENDER_NAME=VRCSender1
 ```
 
 デフォルト設定は`VRCSender1`として、VRChatの`ストリームカメラ`から `Spoutストリーム`を on にするだけで画面キャプチャができるようにしています。
-が、視野が狭いので、OBSで作者は画像を取得させました。
+が、視野が狭いので、OBSで作者は画像を取得させました。  
 
 
 ### 5. キャラクタープロンプトの配置
@@ -152,18 +152,25 @@ prompts/charactor.txt
 uv run main.py
 ```
 
-2. AIエージェント用のVRChatの起動とログイン
-※私の環境ではVRChatを一つのPCから別アカウントで多重起動できなかったため、メインPCはAIエージェントに明け渡し、Quest 3を使ってAIエージェントと会話していました。
+2. AIエージェント用のVRChatの起動とログイン  
+※私の環境ではVRChatを一つのPCから別アカウントで多重起動できなかったため、メインPCはAIエージェントに明け渡し、Quest 3を使ってAIエージェントと会話していました。  
 
 ---
 
 ## 設定一覧（`.env`）
 
 各設定項目の詳細は [`.env.example`](./.env.example) を参照してください。  
-コメントで各変数の説明・デフォルト値・設定例を記載しています。
+コメントで各変数の説明・デフォルト値・設定例を記載しています。  
 
 ---
 
 ## ライセンス
+MIT License  
 
-サードパーティライブラリのライセンスは [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md) を参照してください。
+---
+
+## 謝辞
+サードパーティライブラリのライセンスは [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md) を参照してください。  
+
+長期記憶の保存については familiar-ai の記憶機能を参考に利用させていただきました。  
+https://github.com/susumuota
