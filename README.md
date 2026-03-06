@@ -3,7 +3,7 @@
 VRChat 向けの AI エージェントです。  
 音声認識（STT）・LLM（自然言語生成）・音声合成（TTS）・OSC（Open Sound Control）・DB（SQLite）を組み合わせ、VRChat 内でリアルタイムに AI アバターとして動作します。
 
----
+<br>
 
 ## 動作要件
 
@@ -16,7 +16,7 @@ VRChat 向けの AI エージェントです。
 | 映像入力 | [Spout](https://spout.zeal.co/) 経由で VRChat の映像が送信されていること |
 | 音声認識 | [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) を使用（GPU 推奨） |
 
----
+<br>
 
 ## VRChat AI エージェントができること
 
@@ -34,7 +34,11 @@ AIエージェントは、ユーザーからの音声による呼びかけを受
 | `recall` | 🧠 記憶 | キーワードや話題をもとに過去の記憶を検索して呼び出す |
 | `end_action` | ⏸️ 制御 | 現在のアクションサイクルを終了し、ユーザーの応答を待つ |
 
+<br>
+
 ---
+
+<br>
 
 ## セットアップ手順
 
@@ -44,6 +48,8 @@ AIエージェントは、ユーザーからの音声による呼びかけを受
 git clone <このリポジトリのURL>
 cd vrc-ai-agent
 ```
+
+<br>
 
 ### 2. aiavatarkit をダウンロードして `lib/` フォルダに配置
 
@@ -55,6 +61,8 @@ git clone --branch v0.8.9 --depth 1 https://github.com/uezo/aiavatarkit.git lib/
 ```
 
 > **注意**: `lib/aiavatarkit` として配置してください。`pyproject.toml` でパスが固定されています。
+
+<br>
 
 ### 3. 依存パッケージのインストール
 
@@ -69,6 +77,8 @@ uv sync
 > powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 > ```
 
+<br>
+
 ### 4. 環境変数の設定
 
 `.env.example` をコピーして `.env` を作成します。
@@ -78,6 +88,8 @@ copy .env.example .env
 ```
 
 `.env` を開いて、必要な項目を設定してください。
+
+<br>
 
 #### 使用するLLMのモデルとAPIキーの設定
 
@@ -96,6 +108,8 @@ ANTHROPIC_API_KEY=your_api_key_here
 `gemini-2.5-flash-lite`等の古いモデルでは、安定して動作しないことがあります。  
 （内部で function calling を多用しているため、 安定的に function calling が使えるモデルである必要があります）  
 動作確認では、`gemini-3.1-flash-lite-preview`を用いて 安定的に動作することを確認しています。  
+
+<br>
 
 #### 音声ルーティング設定
 
@@ -123,6 +137,8 @@ VRChatの入力デバイス：CABLE Output (VB-Audio Virtual Cable)
 AUDIO_INPUT_DEVICE_NAME="Voicemeeter Out B1"  
 AUDIO_OUTPUT_DEVICE_NAME="CABLE Input"  
 
+<br>
+
 #### Spout設定の補足
 ```env
 SPOUT_SENDER_NAME=VRCSender1
@@ -131,6 +147,7 @@ SPOUT_SENDER_NAME=VRCSender1
 デフォルト設定は`VRCSender1`として、VRChatの`ストリームカメラ`から `Spoutストリーム`を on にするだけで画面キャプチャができるようにしています。
 が、視野が狭いので、OBSで作者は画像を取得させました。  
 
+<br>
 
 ### 5. キャラクタープロンプトの配置
 
@@ -143,7 +160,7 @@ prompts/charactor.txt
 ファイルの内容はAIエージェントのキャラクター設定を記述したプレーンテキストです。
 自由に編集可能です。
 
----
+<br>
 
 ## 起動方法
 
@@ -155,22 +172,27 @@ uv run main.py
 2. AIエージェント用のVRChatの起動とログイン  
 ※私の環境ではVRChatを一つのPCから別アカウントで多重起動できなかったため、メインPCはAIエージェントに明け渡し、Quest 3を使ってAIエージェントと会話していました。  
 
+<br>
+
 ---
+
+<br>
 
 ## 設定一覧（`.env`）
 
 各設定項目の詳細は [`.env.example`](./.env.example) を参照してください。  
 コメントで各変数の説明・デフォルト値・設定例を記載しています。  
 
----
+<br>
 
 ## ライセンス
 MIT License  
 
----
+<br>
 
 ## 謝辞
 サードパーティライブラリのライセンスは [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md) を参照してください。  
 
 長期記憶の保存については familiar-ai の記憶機能を参考に利用させていただきました。  
 https://github.com/susumuota
+
