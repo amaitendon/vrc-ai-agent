@@ -45,7 +45,7 @@ AIエージェントは、ユーザーからの音声による呼びかけを受
 ### 1. リポジトリのクローン
 
 ```bash
-git clone <このリポジトリのURL>
+git clone https://github.com/amaitendon/vrc-ai-agent
 cd vrc-ai-agent
 ```
 
