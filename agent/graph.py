@@ -14,6 +14,7 @@ from datetime import datetime
 from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
+from langgraph.types import Command
 from loguru import logger
 
 from agent.nodes.action import TOOLS
@@ -44,37 +45,44 @@ async def tool_node_with_timestamp(state):
     """
     ツール実行ノードのラッパー。
     実行結果（ToolMessage）のコンテンツの先頭に実行時刻のタイムスタンプを付与する。
-    また、記憶関連ツールからの特定の戻り値を検知してステートを更新する。
     """
     result = await _tool_node.ainvoke(state)
     now = datetime.now().strftime("%H:%M:%S")
-    timestamped = []
 
-    # マージ用のステート更新辞書
-    state_updates = {"messages": timestamped}
-
-    for msg in result.get("messages", []):
-        content = msg.content
-        if isinstance(content, str):
-            # end_actionツール結果の確認
-            if content.startswith("NUDGE: "):
-                content = content[
-                    7:
-                ]  # end_actionの結果確認のための文字列であり、AIには見せないため、"NUDGE: " を取り除く
-                state_updates["prev_was_end_action"] = True
-            elif "action_ended" in content:
-                state_updates["prev_was_end_action"] = False
-            # Rememberツール結果の確認
-            elif content.startswith("Remembered"):
-                state_updates["unsaved_cycles"] = 0
-
-            # 直接書き換えを避け、model_copyを使用
-            msg = msg.model_copy(update={"content": f"[{now}] {content}"})
-
-        logger.bind(chat=True).info(msg.model_dump_json())
-        timestamped.append(msg)
-
-    return state_updates
+    if isinstance(result, list):
+        # Result is a list of Command objects
+        new_result = []
+        for cmd in result:
+            if hasattr(cmd, "update") and isinstance(cmd.update, dict):
+                timestamped = []
+                for msg in cmd.update.get("messages", []):
+                    if isinstance(msg.content, str):
+                        msg = msg.model_copy(update={"content": f"[{now}] {msg.content}"})
+                    logger.bind(chat=True).info(msg.model_dump_json())
+                    timestamped.append(msg)
+                # `langgraph.types.Command` is not a Pydantic model, so `model_copy` doesn't exist.
+                # We instantiate a new `Command` object to achieve the same immutability goal.
+                new_cmd = Command(
+                    graph=cmd.graph,
+                    update={**cmd.update, "messages": timestamped},
+                    resume=cmd.resume if hasattr(cmd, "resume") else None,
+                    goto=cmd.goto if hasattr(cmd, "goto") else ()
+                )
+                new_result.append(new_cmd)
+            else:
+                new_result.append(cmd)
+        return new_result
+    else:
+        # Result is a dict
+        timestamped = []
+        for msg in result.get("messages", []):
+            content = msg.content
+            if isinstance(content, str):
+                msg = msg.model_copy(update={"content": f"[{now}] {content}"})
+            logger.bind(chat=True).info(msg.model_dump_json())
+            timestamped.append(msg)
+        updates = {**result, "messages": timestamped}
+        return updates
 
 
 # ── 条件分岐 ─────────────────────────────────────────────────────────────────
@@ -131,11 +139,17 @@ def build_graph(priority_queue: asyncio.PriorityQueue) -> StateGraph:
 
     def route_after_tools(state: AgentState) -> str:
         """
-        ToolNodeের後の分岐。
-        - end_actionの実行結果が含まれる → END
+        ToolNodeの後の分岐。
+        - nudge_rememberが"nudge_pending"の場合 → inject_context（ナッジ処理のためループ）
+        - end_actionの実行結果が含まれる("action_ended") → END
         - 高優先度キューにイベントあり → END（main_loopに処理を戻す）
         - それ以外 → inject_contextへループ
         """
+        nudge = state.get("nudge_remember", "idle")
+        if nudge == "nudge_pending":
+            logger.debug("[route_after_tools] nudge_pending → inject_context")
+            return "inject_context"
+
         last_message = state["messages"][-1]
 
         # end_actionが実行されていたらEND

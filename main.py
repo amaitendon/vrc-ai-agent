@@ -157,7 +157,7 @@ async def queue_loop(ctx: AppContext) -> None:
         "last_spoke_at": None,
         "last_memory_saved_at": None,
         "unsaved_cycles": 0,
-        "prev_was_end_action": False,
+        "nudge_remember": "idle",
         "day_summary_context": day_summary_context,
     }
 
@@ -209,9 +209,9 @@ async def queue_loop(ctx: AppContext) -> None:
             persistent_state["unsaved_cycles"] = result.get(
                 "unsaved_cycles", persistent_state["unsaved_cycles"]
             )
-            # サイクルが終了したら prev_was_end_action をリセットする
-            # こうすることで、次のサイクルの最初のend_actionで再びナッジが発火するようになる
-            persistent_state["prev_was_end_action"] = False
+            # サイクル開始時にnudge_rememberを無条件でリセットする。
+            # Commandによるステート更新はグラフ1巡の中でのみ有効な一時的な状態として扱う（意図的な設計）。
+            persistent_state["nudge_remember"] = "idle"
 
         except Exception as e:
             logger.error(f"[queue_loop] graph invocation error: {e}")
@@ -268,8 +268,7 @@ async def queue_loop(ctx: AppContext) -> None:
                         persistent_state["unsaved_cycles"] = result.get(
                             "unsaved_cycles", persistent_state["unsaved_cycles"]
                         )
-                        # リトライ成功後も prev_was_end_action をリセットする（正常系と同じ挙動）
-                        persistent_state["prev_was_end_action"] = False
+                        persistent_state["nudge_remember"] = "idle"
                     except Exception as e2:
                         logger.error(
                             f"[queue_loop] retry after timeout also failed: {e2}"
